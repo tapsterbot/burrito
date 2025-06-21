@@ -2,7 +2,7 @@
 
 version       = "0.1.0"
 author        = "Jason R. Huggins"
-description   = "Lightweight Nim wrapper for QuickJS JavaScript engine"
+description   = "Burrito: Lightweight Nim wrapper for QuickJS JavaScript engine"
 license       = "MIT"
 srcDir        = "src"
 

@@ -3,7 +3,7 @@ nimcache/
 *.exe
 examples/basic_example
 examples/advanced_example
-src/quickjs_nim
+src/burrito
 
 # QuickJS source and builds
 quickjs/

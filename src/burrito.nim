@@ -1,4 +1,4 @@
-## QuickJS Nim Wrapper
+## Burrito - QuickJS Nim Wrapper
 ## 
 ## A lightweight wrapper for the QuickJS JavaScript engine.
 ## This module provides basic functionality to create JS contexts,

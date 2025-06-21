@@ -1,4 +1,4 @@
-## Basic QuickJS Nim Example
+## Basic Burrito Example
 ##
 ## This example demonstrates:
 ## 1. Creating a QuickJS instance
@@ -6,12 +6,12 @@
 ## 3. Setting global variables from Nim
 ## 4. Working with the simplified API
 
-import ../src/quickjs_nim
+import ../src/burrito
 import std/[strutils, tables, sequtils]
 
 proc main() =
-  echo "QuickJS Nim Wrapper - Basic Example"
-  echo "=================================="
+  echo "Burrito - QuickJS Nim Wrapper - Basic Example"
+  echo "=============================================="
   
   # Create QuickJS instance
   var js = newQuickJS()

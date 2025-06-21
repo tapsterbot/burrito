@@ -1,4 +1,4 @@
-## Advanced QuickJS Nim Example
+## Advanced Burrito Example
 ##
 ## This example demonstrates:
 ## 1. More complex JavaScript evaluation
@@ -6,7 +6,7 @@
 ## 3. Working with different data types
 ## 4. Registering actual Nim functions as C callbacks
 
-import ../src/quickjs_nim
+import ../src/burrito
 import std/[strutils, tables, math, algorithm]
 
 # Global storage for registered functions (simplified approach)
@@ -92,8 +92,8 @@ proc registerNimFunction(js: QuickJS, name: string, nimFunc: proc(args: seq[stri
                                    JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
 
 proc main() =
-  echo "QuickJS Nim Wrapper - Advanced Example"
-  echo "======================================"
+  echo "Burrito - QuickJS Nim Wrapper - Advanced Example"
+  echo "================================================="
   
   var js = newQuickJS()
   defer: js.close()

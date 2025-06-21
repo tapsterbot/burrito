@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains the QuickJS JavaScript engine (version 2025-04-26), a small and embeddable JavaScript engine that supports ES2023 specification. QuickJS is a C implementation that can be compiled to native executables and provides both a JavaScript interpreter (`qjs`) and compiler (`qjsc`).
+This repository contains **Burrito**, a Nim wrapper for the QuickJS JavaScript engine (version 2025-04-26). QuickJS is a small and embeddable JavaScript engine that supports ES2023 specification. QuickJS is a C implementation that can be compiled to native executables and provides both a JavaScript interpreter (`qjs`) and compiler (`qjsc`).
+
+The Burrito wrapper is located in `src/burrito.nim` and provides a lightweight, idiomatic Nim interface to QuickJS.
 
 ## Build Commands
 
@@ -88,8 +90,15 @@ The Makefile supports multiple configurations:
 
 ## Development Notes
 
+### Burrito Wrapper
+- Main module: `src/burrito.nim`
+- Examples: `examples/basic_example.nim`, `examples/advanced_example.nim`
+- Build wrapper: `nim c src/burrito.nim`
+- Run examples: `nimble example` or `nim c -r examples/basic_example.nim`
+
 ### Working Directory
-All build commands should be run from the `quickjs/` subdirectory, not the repository root.
+QuickJS build commands should be run from the `quickjs/` subdirectory, not the repository root.
+Nim/Burrito commands should be run from the repository root.
 
 ### Static Compilation
 QuickJS supports compiling JavaScript to standalone executables using `qjsc` with various optimization flags for minimal runtime dependencies.

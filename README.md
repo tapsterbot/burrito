@@ -1,4 +1,4 @@
-# QuickJS Nim Wrapper
+# Burrito 🌯
 
 A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/quickjs). This wrapper provides an idiomatic Nim interface to embed JavaScript execution and expose Nim functions to JavaScript code.
 
@@ -14,7 +14,7 @@ A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https:
 
 ### Prerequisites
 
-- Nim >= 1.6.0
+- Nim >= 2.2.4
 - C compiler (gcc/clang)
 - Make
 
@@ -22,8 +22,8 @@ A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https:
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
-   cd quickjs-nim
+   git clone https://github.com/tapsterbot/burrito.git
+   cd burrito
    ```
 
 2. **Build QuickJS library:**
@@ -50,7 +50,7 @@ A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https:
 ### Basic Usage
 
 ```nim
-import quickjs_nim
+import burrito
 
 # Create a QuickJS instance
 var js = newQuickJS()
@@ -72,7 +72,7 @@ echo jsonResult  # "{\"name\":\"Nim\",\"type\":\"awesome\"}"
 ### Working with Global Variables
 
 ```nim
-import quickjs_nim
+import burrito
 import std/tables
 
 var js = newQuickJS()
@@ -93,7 +93,7 @@ echo result  # "Hello QuickJS, version 2025-04-26!"
 ### Defining JavaScript Functions from Nim
 
 ```nim
-import quickjs_nim
+import burrito
 
 var js = newQuickJS()
 defer: js.close()
@@ -109,25 +109,26 @@ let result2 = js.eval("greet('Alice')")  # "Hello, Alice!"
 ### Advanced Example
 
 ```nim
-import quickjs_nim
+import burrito
 
-proc processData(args: seq[string]): string =
-  # Process data in Nim with full access to Nim's ecosystem
-  let input = args[0]
-  # ... complex Nim logic here ...
-  return "Processed: " & input
+# Process data in Nim with full access to Nim's ecosystem
+let input = "sample data"
+# ... complex Nim logic here ...
+let processed = "Processed: " & input
 
 var js = newQuickJS()
 defer: js.close()
 
-js.addFunction("processData", processData)
+# Set the processed data as a global variable
+var globals = initTable[string, string]()
+globals["processedData"] = processed
 
-# Execute complex JavaScript that calls back to Nim
-let result = js.eval("""
+# Execute complex JavaScript using the processed data
+let result = js.evalWithGlobals("""
   const data = [1, 2, 3, 4, 5];
-  const processed = data.map(x => x * 2);
-  'Result: ' + processed.join(', ');
-""")
+  const doubled = data.map(x => x * 2);
+  `${processedData} - Numbers: ` + doubled.join(', ');
+""", globals)
 
 echo result
 ```
@@ -139,6 +140,10 @@ echo result
 - `QuickJS`: Main wrapper object containing runtime and context
 - `JSValue`: JavaScript value type
 - `JSException`: Exception type for JavaScript errors
+- `newQuickJS()`: Create a new QuickJS instance
+- `eval()`: Evaluate JavaScript code
+- `evalWithGlobals()`: Evaluate with Nim variables
+- `setJSFunction()`: Define JS functions from strings
 
 ### Core Functions
 
@@ -194,9 +199,9 @@ This wrapper provides a focused interface to QuickJS:
 ## Building from Source
 
 1. **Get QuickJS source**: The repository includes QuickJS source in the `quickjs/` directory
-2. **Build QuickJS**: `cd quickjs && make`
-3. **Build Nim wrapper**: `nim c src/quickjs_nim.nim`
-4. **Run tests**: `nim c -r examples/basic_example.nim`
+2. **Build QuickJS**: `nimble build_lib` or `cd quickjs && make`
+3. **Build Nim wrapper**: `nim c src/burrito.nim`
+4. **Run tests**: `nimble example` or `nim c -r examples/basic_example.nim`
 
 ## Contributing
 
@@ -214,5 +219,3 @@ QuickJS is licensed under the MIT license. See `quickjs/LICENSE` for QuickJS lic
 - [QuickJS Documentation](https://bellard.org/quickjs/) - Official QuickJS documentation
 
 ---
-
-**Note**: This wrapper prioritizes simplicity and essential functionality. For advanced use cases requiring complex JavaScript-Nim interop, you might need to extend the wrapper or use more sophisticated bridging mechanisms.
