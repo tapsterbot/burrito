@@ -1,14 +1,13 @@
 # Burrito 🌯
 
-A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/quickjs). This wrapper provides an idiomatic Nim interface to embed JavaScript execution and expose Nim functions to JavaScript code.
+A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/quickjs). This wrapper provides a Nim interface to embed JavaScript execution and expose Nim functions to JavaScript code.
 
 ## Features
 
-- 🚀 **Lightweight**: Minimal overhead wrapper around QuickJS
-- 🔗 **Bidirectional**: Evaluate JavaScript from Nim and call Nim functions from JavaScript  
-- 🛡️ **Safe**: Proper memory management and error handling
-- 📦 **Easy**: Simple API for common use cases
-- 🎯 **Focused**: Core functionality without bloat
+- 📦 **Simple**: Easy-to-use API for embedding JavaScript in Nim
+- 🔗 **Two-way**: Run JavaScript from Nim and call Nim functions from JavaScript
+- 🔢 **Flexible**: Support for functions with different numbers of arguments
+- 🔄 **Type conversion**: Built-in helpers for converting between Nim and JavaScript values
 
 ## Installation
 
@@ -62,27 +61,65 @@ echo js.eval("'Hello ' + 'World!'")      # Hello World!
 echo js.eval("Math.sqrt(16)")            # 4
 ```
 
-### Calling Nim Functions from JavaScript
+### Calling Nim Functions from JavaScript (Native C Bridging)
 
 ```nim
 import burrito
 import std/times
 
-# Define Nim functions
-proc getTime(): string = now().format("yyyy-MM-dd HH:mm:ss")
-proc getMessage(): string = "Hello from Nim! 🌯"
+# Define Nim functions that work with JSValue directly
+proc getTime(ctx: ptr JSContext): JSValue =
+  let timeStr = now().format("yyyy-MM-dd HH:mm:ss")
+  result = nimStringToJS(ctx, timeStr)
+
+proc getMessage(ctx: ptr JSContext): JSValue =
+  let msg = "Hello from Nim! 🌯"
+  result = nimStringToJS(ctx, msg)
 
 var js = newQuickJS()
 defer: js.close()
 
-# Set up the bridge and register functions
-js.setupNimBridge()
+# Register functions using native C bridging (no setup needed!)
 js.registerFunction("getTime", getTime)
 js.registerFunction("getMessage", getMessage)
 
-# Call Nim functions from JavaScript!
+# Call Nim functions from JavaScript with native performance!
 echo js.eval("getTime()")     # "2025-06-21 17:33:00"
 echo js.eval("getMessage()")  # "Hello from Nim! 🌯"
+```
+
+### Advanced Function Registration
+
+```nim
+import burrito
+
+# Different function signatures are supported
+proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
+  let num = toNimFloat(ctx, arg)
+  nimFloatToJS(ctx, num * num)
+
+proc addNumbers(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue =
+  let a = toNimFloat(ctx, arg1)
+  let b = toNimFloat(ctx, arg2)
+  nimFloatToJS(ctx, a + b)
+
+proc concatenate(ctx: ptr JSContext, args: seq[JSValue]): JSValue =
+  var result_str = ""
+  for arg in args:
+    result_str.add(toNimString(ctx, arg))
+  nimStringToJS(ctx, result_str)
+
+var js = newQuickJS()
+defer: js.close()
+
+# Register functions with different arities
+js.registerFunction("square", square)           # 1 argument
+js.registerFunction("add", addNumbers)          # 2 arguments  
+js.registerFunction("concat", concatenate)      # variadic arguments
+
+echo js.eval("square(7)")                       # 49
+echo js.eval("add(5, 3)")                       # 8
+echo js.eval("concat('Hello', ' ', 'World!')")  # Hello World!
 ```
 
 ## API Reference
@@ -90,12 +127,13 @@ echo js.eval("getMessage()")  # "Hello from Nim! 🌯"
 ### Types
 
 - `QuickJS`: Main wrapper object containing runtime and context
-- `JSValue`: JavaScript value type
+- `JSValue`: JavaScript value type (native QuickJS value)
 - `JSException`: Exception type for JavaScript errors
-- `newQuickJS()`: Create a new QuickJS instance
-- `eval()`: Evaluate JavaScript code
-- `evalWithGlobals()`: Evaluate with Nim variables
-- `setJSFunction()`: Define JS functions from strings
+- `NimFunction0*`: Function type with no arguments: `proc(ctx: ptr JSContext): JSValue`
+- `NimFunction1*`: Function type with one argument: `proc(ctx: ptr JSContext, arg: JSValue): JSValue`
+- `NimFunction2*`: Function type with two arguments: `proc(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue`
+- `NimFunction3*`: Function type with three arguments: `proc(ctx: ptr JSContext, arg1, arg2, arg3: JSValue): JSValue`
+- `NimFunctionVariadic*`: Function type with variable arguments: `proc(ctx: ptr JSContext, args: seq[JSValue]): JSValue`
 
 ### Core Functions
 
@@ -114,51 +152,35 @@ Evaluates JavaScript code with global variables set from Nim.
 #### `setJSFunction(js: QuickJS, name: string, value: string)`
 Sets a JavaScript function in the global scope from a string definition.
 
-#### `setupNimBridge(js: var QuickJS)`
-Sets up the bridge system to allow JavaScript to call Nim functions.
+#### `registerFunction(js: var QuickJS, name: string, nimFunc: NimFunction0|1|2|3|Variadic)`
+Registers a Nim function to be callable from JavaScript using native C function bridging. The function type is automatically detected based on the signature. No setup required!
 
-#### `registerFunction(js: var QuickJS, name: string, nimFunc: NimFunction)`
-Registers a Nim function to be callable from JavaScript. Requires `setupNimBridge()` to be called first.
+### Value Conversion Helpers
+
+#### JavaScript to Nim
+- `toNimString(ctx: ptr JSContext, val: JSValueConst): string`
+- `toNimInt(ctx: ptr JSContext, val: JSValueConst): int32`
+- `toNimFloat(ctx: ptr JSContext, val: JSValueConst): float64`
+- `toNimBool(ctx: ptr JSContext, val: JSValueConst): bool`
+
+#### Nim to JavaScript  
+- `nimStringToJS(ctx: ptr JSContext, str: string): JSValue`
+- `nimIntToJS(ctx: ptr JSContext, val: int32): JSValue`
+- `nimFloatToJS(ctx: ptr JSContext, val: float64): JSValue`
+- `nimBoolToJS(ctx: ptr JSContext, val: bool): JSValue`
 
 ## Examples
 
 Run the examples:
 ```bash
-nim c -r examples/basic_example.nim        # Basic JavaScript evaluation
-nim c -r examples/call_nim_from_js.nim     # Call Nim functions from JavaScript
+nim c -r examples/basic_example.nim             # Basic JavaScript evaluation
+nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript
+nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridging
 ```
-
-## Architecture
-
-This wrapper provides a focused interface to QuickJS:
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Nim Code      │    │  QuickJS Wrapper │    │   QuickJS C     │
-│                 │◄──►│                  │◄──►│                 │
-│ Your Functions  │    │  Type Safety     │    │  JS Engine      │
-│ Your Logic      │    │  Memory Mgmt     │    │  Execution      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-## Limitations & Notes
-
-- **Simplified API**: This wrapper prioritizes simplicity. Complex Nim-JavaScript function bridging is demonstrated but simplified.
-- **String-based Interface**: Data exchange happens primarily through strings for simplicity and reliability.
-- **Error Handling**: JavaScript exceptions are converted to strings. More sophisticated error handling could be added.
-- **Memory Management**: The wrapper handles QuickJS memory management automatically.
-- **Performance**: Minimal overhead for most operations. String conversions have some cost.
-
-## Building from Source
-
-1. **Get QuickJS source**: The repository includes QuickJS source in the `quickjs/` directory
-2. **Build QuickJS**: `nimble build_lib` or `cd quickjs && make`
-3. **Build Nim wrapper**: `nim c src/burrito.nim`
-4. **Run tests**: `nimble example` or `nim c -r examples/basic_example.nim`
 
 ## Contributing
 
-This is a focused, lightweight wrapper. Contributions should maintain the philosophy of simplicity and essential functionality.
+Patches welcome!
 
 ## License
 

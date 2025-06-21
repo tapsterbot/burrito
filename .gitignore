@@ -4,6 +4,7 @@ nimcache/
 examples/basic_example
 examples/advanced_example
 examples/call_nim_from_js
+examples/advanced_native_bridging
 src/burrito
 
 # QuickJS source and builds

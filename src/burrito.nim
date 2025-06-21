@@ -4,7 +4,7 @@
 ## This module provides basic functionality to create JS contexts,
 ## evaluate JavaScript code, and expose Nim functions to JavaScript.
 
-import std/[tables, strutils]
+import std/tables
 
 const 
   quickjsPath = when defined(windows): 
@@ -16,58 +16,66 @@ const
 {.passL: "-lm".}
 
 type
-  JSRuntime* = ptr object
-  JSContext* = ptr object
+  JSRuntime* {.importc: "struct JSRuntime", header: "quickjs/quickjs.h".} = object
+  JSContext* {.importc: "struct JSContext", header: "quickjs/quickjs.h".} = object
   JSAtom* = uint32
   JSClassID* = uint32
+  
+  # Pointer types for runtime and context
+  JSRuntimePtr* = ptr JSRuntime
+  JSContextPtr* = ptr JSContext
   
   # Import JSValue as opaque struct from C  
   JSValue* {.importc, header: "quickjs/quickjs.h".} = object
   JSValueConst* = JSValue
 
   # Function pointer type for JavaScript C functions
-  JSCFunction* = proc(ctx: JSContext, thisVal: JSValueConst, argc: int32, argv: ptr JSValueConst): JSValue {.cdecl.}
-  JSCFunctionMagic* = proc(ctx: JSContext, thisVal: JSValueConst, argc: int32, argv: ptr JSValueConst, magic: int32): JSValue {.cdecl.}
-  JSCFunctionData* = proc(ctx: JSContext, thisVal: JSValueConst, argc: int32, argv: ptr JSValueConst, magic: int32, data: ptr JSValue): JSValue {.cdecl.}
+  JSCFunction* = proc(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint, argv: ptr JSValueConst): JSValue {.cdecl.}
+  JSCFunctionMagic* = proc(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint, argv: ptr JSValueConst, magic: cint): JSValue {.cdecl.}
+  JSCFunctionData* = proc(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint, argv: ptr JSValueConst, magic: cint, data: ptr JSValue): JSValue {.cdecl.}
 
 # Core QuickJS API bindings
 {.push importc, header: "quickjs/quickjs.h".}
 
-proc JS_NewRuntime*(): JSRuntime
-proc JS_FreeRuntime*(rt: JSRuntime)
-proc JS_NewContext*(rt: JSRuntime): JSContext
-proc JS_FreeContext*(ctx: JSContext)
+proc JS_NewRuntime*(): ptr JSRuntime
+proc JS_FreeRuntime*(rt: ptr JSRuntime)
+proc JS_NewContext*(rt: ptr JSRuntime): ptr JSContext
+proc JS_FreeContext*(ctx: ptr JSContext)
 
 # Value operations
-proc JS_NewInt32*(ctx: JSContext, val: int32): JSValue
-proc JS_NewFloat64*(ctx: JSContext, val: float64): JSValue
-proc JS_NewString*(ctx: JSContext, str: cstring): JSValue
-proc JS_NewBool*(ctx: JSContext, val: int32): JSValue
-proc JS_NewObject*(ctx: JSContext): JSValue
+proc JS_NewInt32*(ctx: ptr JSContext, val: int32): JSValue
+proc JS_NewFloat64*(ctx: ptr JSContext, val: float64): JSValue
+proc JS_NewString*(ctx: ptr JSContext, str: cstring): JSValue
+proc JS_NewBool*(ctx: ptr JSContext, val: cint): JSValue
+proc JS_NewObject*(ctx: ptr JSContext): JSValue
 
 # Getting values from JSValue
-proc JS_ToInt32*(ctx: JSContext, pres: ptr int32, val: JSValueConst): int32
-proc JS_ToFloat64*(ctx: JSContext, pres: ptr float64, val: JSValueConst): int32
-proc JS_ToCString*(ctx: JSContext, val: JSValueConst): cstring
-proc JS_FreeCString*(ctx: JSContext, str: cstring)
-proc JS_ToBool*(ctx: JSContext, val: JSValueConst): int32
+proc JS_ToInt32*(ctx: ptr JSContext, pres: ptr int32, val: JSValueConst): cint
+proc JS_ToFloat64*(ctx: ptr JSContext, pres: ptr float64, val: JSValueConst): cint
+proc JS_ToCString*(ctx: ptr JSContext, val: JSValueConst): cstring
+proc JS_FreeCString*(ctx: ptr JSContext, str: cstring)
+proc JS_ToBool*(ctx: ptr JSContext, val: JSValueConst): cint
 
 # Function and property operations
-proc JS_NewCFunction*(ctx: JSContext, `func`: JSCFunction, name: cstring, length: int32): JSValue
-proc JS_NewCFunction2*(ctx: JSContext, `func`: JSCFunction, name: cstring, length: int32, cproto: int32, magic: int32): JSValue
-proc JS_NewCFunctionMagic*(ctx: JSContext, `func`: JSCFunctionMagic, name: cstring, length: int32, cproto: int32, magic: int32): JSValue
-proc JS_NewCFunctionData*(ctx: JSContext, `func`: JSCFunctionData, length: int32, magic: int32, dataLen: int32, data: ptr JSValue): JSValue
-proc JS_DefinePropertyValueStr*(ctx: JSContext, thisObj: JSValueConst, prop: cstring, val: JSValue, flags: int32): int32
+proc JS_NewCFunction*(ctx: ptr JSContext, `func`: JSCFunction, name: cstring, length: cint): JSValue
+proc JS_NewCFunction2*(ctx: ptr JSContext, `func`: JSCFunction, name: cstring, length: cint, cproto: cint, magic: cint): JSValue
+proc JS_NewCFunctionMagic*(ctx: ptr JSContext, `func`: JSCFunctionMagic, name: cstring, length: cint, cproto: cint, magic: cint): JSValue
+proc JS_NewCFunctionData*(ctx: ptr JSContext, `func`: JSCFunctionData, length: cint, magic: cint, dataLen: cint, data: ptr JSValue): JSValue
+proc JS_DefinePropertyValueStr*(ctx: ptr JSContext, thisObj: JSValueConst, prop: cstring, val: JSValue, flags: cint): cint
+
+# Context opaque data operations
+proc JS_SetContextOpaque*(ctx: ptr JSContext, opaque: pointer)
+proc JS_GetContextOpaque*(ctx: ptr JSContext): pointer
 
 # Evaluation
-proc JS_Eval*(ctx: JSContext, input: cstring, inputLen: csize_t, filename: cstring, evalFlags: int32): JSValue
+proc JS_Eval*(ctx: ptr JSContext, input: cstring, inputLen: csize_t, filename: cstring, evalFlags: cint): JSValue
 
 # Memory management
-proc JS_FreeValue*(ctx: JSContext, v: JSValue)
-proc JS_DupValue*(ctx: JSContext, v: JSValueConst): JSValue
+proc JS_FreeValue*(ctx: ptr JSContext, v: JSValue)
+proc JS_DupValue*(ctx: ptr JSContext, v: JSValueConst): JSValue
 
 # Global object
-proc JS_GetGlobalObject*(ctx: JSContext): JSValue
+proc JS_GetGlobalObject*(ctx: ptr JSContext): JSValue
 
 {.pop.}
 
@@ -90,37 +98,59 @@ const
   JS_CFUNC_generic_magic* = 1
 
 # Constants as procs that call the C macros
-proc jsUndefined*(ctx: JSContext): JSValue =
+proc jsUndefined*(ctx: ptr JSContext): JSValue =
   ## Return JavaScript undefined value
   {.emit: "return JS_UNDEFINED;".}
 
-proc jsNull*(ctx: JSContext): JSValue =
+proc jsNull*(ctx: ptr JSContext): JSValue =
   ## Return JavaScript null value
   {.emit: "return JS_NULL;".}
 
-proc jsTrue*(ctx: JSContext): JSValue =
+proc jsTrue*(ctx: ptr JSContext): JSValue =
   ## Return JavaScript true value
   {.emit: "return JS_TRUE;".}
 
-proc jsFalse*(ctx: JSContext): JSValue =
+proc jsFalse*(ctx: ptr JSContext): JSValue =
   ## Return JavaScript false value
   {.emit: "return JS_FALSE;".}
 
 # High-level wrapper types
 type
-  # Nim function signature that can be registered
-  NimFunction* = proc(): string {.nimcall.}
+  # Nim function signatures that can be registered (context-aware)
+  NimFunction0* = proc(ctx: ptr JSContext): JSValue {.nimcall.}
+  NimFunction1* = proc(ctx: ptr JSContext, arg: JSValue): JSValue {.nimcall.}
+  NimFunction2* = proc(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue {.nimcall.}
+  NimFunction3* = proc(ctx: ptr JSContext, arg1, arg2, arg3: JSValue): JSValue {.nimcall.}
+  NimFunctionVariadic* = proc(ctx: ptr JSContext, args: seq[JSValue]): JSValue {.nimcall.}
+  
+  # Function registry entry
+  NimFunctionKind* = enum
+    nimFunc0 = 0, nimFunc1, nimFunc2, nimFunc3, nimFuncVar
+    
+  NimFunctionEntry* = object
+    case kind*: NimFunctionKind
+    of nimFunc0: func0*: NimFunction0
+    of nimFunc1: func1*: NimFunction1
+    of nimFunc2: func2*: NimFunction2
+    of nimFunc3: func3*: NimFunction3
+    of nimFuncVar: funcVar*: NimFunctionVariadic
+    
+  # Context data to pass to C callbacks
+  BurritoContextData* = object
+    functions*: Table[cint, NimFunctionEntry]
+    context*: ptr JSContext
   
   QuickJS* = object
-    runtime*: JSRuntime
-    context*: JSContext
-    registeredFunctions*: Table[string, NimFunction]
+    runtime*: ptr JSRuntime
+    context*: ptr JSContext
+    contextData*: ptr BurritoContextData
+    nextFunctionId*: cint
     
   JSException* = object of CatchableError
     jsValue*: JSValue
 
 # Value conversion helpers
-proc toNimString*(ctx: JSContext, val: JSValueConst): string =
+proc toNimString*(ctx: ptr JSContext, val: JSValueConst): string =
   let cstr = JS_ToCString(ctx, val)
   if cstr != nil:
     result = $cstr
@@ -128,14 +158,77 @@ proc toNimString*(ctx: JSContext, val: JSValueConst): string =
   else:
     result = ""
 
-proc toNimInt*(ctx: JSContext, val: JSValueConst): int32 =
+proc toNimInt*(ctx: ptr JSContext, val: JSValueConst): int32 =
   discard JS_ToInt32(ctx, addr result, val)
 
-proc toNimFloat*(ctx: JSContext, val: JSValueConst): float64 =
+proc toNimFloat*(ctx: ptr JSContext, val: JSValueConst): float64 =
   discard JS_ToFloat64(ctx, addr result, val)
 
-proc toNimBool*(ctx: JSContext, val: JSValueConst): bool =
+proc toNimBool*(ctx: ptr JSContext, val: JSValueConst): bool =
   JS_ToBool(ctx, val) != 0
+
+# Conversion from Nim types to JSValue
+proc nimStringToJS*(ctx: ptr JSContext, str: string): JSValue =
+  JS_NewString(ctx, str.cstring)
+
+proc nimIntToJS*(ctx: ptr JSContext, val: int32): JSValue =
+  JS_NewInt32(ctx, val)
+
+proc nimFloatToJS*(ctx: ptr JSContext, val: float64): JSValue =
+  JS_NewFloat64(ctx, val)
+
+proc nimBoolToJS*(ctx: ptr JSContext, val: bool): JSValue =
+  JS_NewBool(ctx, if val: 1 else: 0)
+
+# Convert JSValue arguments to a sequence
+proc jsArgsToSeq*(ctx: ptr JSContext, argc: cint, argv: ptr JSValueConst): seq[JSValue] =
+  result = newSeq[JSValue](argc)
+  for i in 0..<argc:
+    result[i] = JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[i])
+
+# Generic C function trampoline for Nim function calls
+proc nimFunctionTrampoline(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint, argv: ptr JSValueConst, magic: cint): JSValue {.cdecl.} =
+  ## Generic trampoline that calls registered Nim functions from JavaScript
+  ## Uses magic parameter as function ID to lookup the actual Nim function
+  try:
+    let contextData = cast[ptr BurritoContextData](JS_GetContextOpaque(ctx))
+    if contextData == nil:
+      return jsUndefined(ctx)
+    
+    if magic notin contextData.functions:
+      return jsUndefined(ctx)
+    
+    let funcEntry = contextData.functions[magic]
+    
+    case funcEntry.kind
+    of nimFunc0:
+      # No arguments
+      return funcEntry.func0(ctx)
+    of nimFunc1:
+      # One argument
+      if argc >= 1:
+        let arg = cast[ptr UncheckedArray[JSValueConst]](argv)[0]
+        return funcEntry.func1(ctx, JS_DupValue(ctx, arg))
+      else:
+        return funcEntry.func1(ctx, jsUndefined(ctx))
+    of nimFunc2:
+      # Two arguments
+      let arg1 = if argc >= 1: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[0]) else: jsUndefined(ctx)
+      let arg2 = if argc >= 2: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[1]) else: jsUndefined(ctx)
+      return funcEntry.func2(ctx, arg1, arg2)
+    of nimFunc3:
+      # Three arguments
+      let arg1 = if argc >= 1: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[0]) else: jsUndefined(ctx)
+      let arg2 = if argc >= 2: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[1]) else: jsUndefined(ctx)
+      let arg3 = if argc >= 3: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[2]) else: jsUndefined(ctx)
+      return funcEntry.func3(ctx, arg1, arg2, arg3)
+    of nimFuncVar:
+      # Variadic
+      let args = jsArgsToSeq(ctx, argc, argv)
+      return funcEntry.funcVar(ctx, args)
+  except:
+    # Return undefined on any exception
+    return jsUndefined(ctx)
 
 # Core QuickJS wrapper
 proc newQuickJS*(): QuickJS =
@@ -149,10 +242,21 @@ proc newQuickJS*(): QuickJS =
     JS_FreeRuntime(rt)
     raise newException(JSException, "Failed to create QuickJS context")
   
-  result = QuickJS(runtime: rt, context: ctx, registeredFunctions: initTable[string, NimFunction]())
+  # Create context data for function registry
+  let contextData = cast[ptr BurritoContextData](alloc0(sizeof(BurritoContextData)))
+  contextData.functions = initTable[int32, NimFunctionEntry]()
+  contextData.context = ctx
+  
+  # Set context opaque data
+  JS_SetContextOpaque(ctx, contextData)
+  
+  result = QuickJS(runtime: rt, context: ctx, contextData: contextData, nextFunctionId: 1)
 
 proc close*(js: var QuickJS) =
   ## Clean up QuickJS instance
+  if js.contextData != nil:
+    dealloc(js.contextData)
+    js.contextData = nil
   if js.context != nil:
     JS_FreeContext(js.context)
     js.context = nil
@@ -160,33 +264,15 @@ proc close*(js: var QuickJS) =
     JS_FreeRuntime(js.runtime)
     js.runtime = nil
 
-# Global registry for function mappings
-var globalFunctionRegistry {.global.}: Table[string, NimFunction]
-
 proc eval*(js: QuickJS, code: string, filename: string = "<eval>"): string =
   ## Evaluate JavaScript code and return result as string
-  ## This handles special bridge calls to execute Nim functions
-  
-  # Normal JavaScript evaluation
   let val = JS_Eval(js.context, code.cstring, code.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
   defer: JS_FreeValue(js.context, val)
   
-  let jsResult = toNimString(js.context, val)
-  
-  # Check if the result contains Nim function call placeholders and replace them
-  result = jsResult
-  for functionName, nimFunc in globalFunctionRegistry:
-    let placeholder = "__NIM_CALL_" & functionName & "__"
-    if placeholder in result:
-      let nimResult = nimFunc()
-      result = result.replace(placeholder, nimResult)
+  result = toNimString(js.context, val)
 
-# Simplified function registration without complex bridging
-# For the initial version, we'll demonstrate the concept
 proc evalWithGlobals*(js: QuickJS, code: string, globals: Table[string, string] = initTable[string, string]()): string =
   ## Evaluate JavaScript code with some global variables set as strings
-  ## This is a simplified approach for the basic wrapper
-  
   # Set global variables as strings
   for key, value in globals:
     let jsVal = JS_NewString(js.context, value.cstring)
@@ -198,54 +284,78 @@ proc evalWithGlobals*(js: QuickJS, code: string, globals: Table[string, string] 
   # Evaluate the code
   return js.eval(code)
 
-# Basic function to demonstrate setting a JavaScript function from Nim
 proc setJSFunction*(js: QuickJS, name: string, value: string) =
   ## Set a JavaScript function as a string in the global scope
-  ## This is a simple approach - the function is defined as JS code
   let code = name & " = " & value
   discard js.eval(code)
 
-proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction) =
-  ## Register a Nim function to be callable from JavaScript
-  ## This creates a JavaScript function that requests Nim execution via globals
-  js.registeredFunctions[name] = nimFunc
-  globalFunctionRegistry[name] = nimFunc
+# Native C function registration methods
+proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction0) =
+  ## Register a Nim function with no arguments to be callable from JavaScript
+  let functionId = js.nextFunctionId
+  js.nextFunctionId += 1
   
-  # Create a JavaScript function that sets a global variable for Nim to process
-  let code = name & " = function() { return __nimBridge('" & name & "'); }"
-  discard js.eval(code)
+  js.contextData.functions[functionId] = NimFunctionEntry(kind: nimFunc0, func0: nimFunc)
+  
+  let jsFunc = JS_NewCFunctionMagic(js.context, cast[JSCFunctionMagic](nimFunctionTrampoline), 
+                                   name.cstring, 0, JS_CFUNC_generic_magic, functionId)
+  let globalObj = JS_GetGlobalObject(js.context)
+  discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc, 
+                                   JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
+  JS_FreeValue(js.context, globalObj)
 
-# Execute a pending Nim function call
-proc executePendingCall(js: QuickJS): string =
-  let pendingCallCode = "globalThis.__nimPendingCall || ''"
-  let pendingCallVal = JS_Eval(js.context, pendingCallCode.cstring, pendingCallCode.len.csize_t, "<eval>".cstring, JS_EVAL_TYPE_GLOBAL)
-  defer: JS_FreeValue(js.context, pendingCallVal)
+proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction1) =
+  ## Register a Nim function with one argument to be callable from JavaScript
+  let functionId = js.nextFunctionId
+  js.nextFunctionId += 1
   
-  let functionName = toNimString(js.context, pendingCallVal)
+  js.contextData.functions[functionId] = NimFunctionEntry(kind: nimFunc1, func1: nimFunc)
   
-  if functionName != "" and functionName in globalFunctionRegistry:
-    # Execute the Nim function
-    let nimFunc = globalFunctionRegistry[functionName]
-    let nimResult = nimFunc()
-    
-    # Clear the pending call in JavaScript
-    discard JS_Eval(js.context, "globalThis.__nimPendingCall = ''".cstring, 31, "<eval>".cstring, JS_EVAL_TYPE_GLOBAL)
-    
-    return nimResult
-  else:
-    return "Function not found: " & functionName
+  let jsFunc = JS_NewCFunctionMagic(js.context, cast[JSCFunctionMagic](nimFunctionTrampoline), 
+                                   name.cstring, 1, JS_CFUNC_generic_magic, functionId)
+  let globalObj = JS_GetGlobalObject(js.context)
+  discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc, 
+                                   JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
+  JS_FreeValue(js.context, globalObj)
 
-# Helper function to establish the bridge between JS and Nim
-proc setupNimBridge*(js: var QuickJS) =
-  ## Set up the JavaScript bridge function that can call registered Nim functions
-  let bridgeCode = """
-    __nimBridge = function(functionName) {
-      // For now, we'll use a synchronous approach with a global result cache
-      globalThis.__nimPendingCall = functionName;
-      globalThis.__nimResult = '';
-      
-      // Return a placeholder that will be replaced
-      return '__NIM_CALL_' + functionName + '__';
-    };
-  """
-  discard js.eval(bridgeCode)
+proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction2) =
+  ## Register a Nim function with two arguments to be callable from JavaScript
+  let functionId = js.nextFunctionId
+  js.nextFunctionId += 1
+  
+  js.contextData.functions[functionId] = NimFunctionEntry(kind: nimFunc2, func2: nimFunc)
+  
+  let jsFunc = JS_NewCFunctionMagic(js.context, cast[JSCFunctionMagic](nimFunctionTrampoline), 
+                                   name.cstring, 2, JS_CFUNC_generic_magic, functionId)
+  let globalObj = JS_GetGlobalObject(js.context)
+  discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc, 
+                                   JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
+  JS_FreeValue(js.context, globalObj)
+
+proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction3) =
+  ## Register a Nim function with three arguments to be callable from JavaScript
+  let functionId = js.nextFunctionId
+  js.nextFunctionId += 1
+  
+  js.contextData.functions[functionId] = NimFunctionEntry(kind: nimFunc3, func3: nimFunc)
+  
+  let jsFunc = JS_NewCFunctionMagic(js.context, cast[JSCFunctionMagic](nimFunctionTrampoline), 
+                                   name.cstring, 3, JS_CFUNC_generic_magic, functionId)
+  let globalObj = JS_GetGlobalObject(js.context)
+  discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc, 
+                                   JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
+  JS_FreeValue(js.context, globalObj)
+
+proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunctionVariadic) =
+  ## Register a Nim function with variadic arguments to be callable from JavaScript
+  let functionId = js.nextFunctionId
+  js.nextFunctionId += 1
+  
+  js.contextData.functions[functionId] = NimFunctionEntry(kind: nimFuncVar, funcVar: nimFunc)
+  
+  let jsFunc = JS_NewCFunctionMagic(js.context, cast[JSCFunctionMagic](nimFunctionTrampoline), 
+                                   name.cstring, -1, JS_CFUNC_generic_magic, functionId)
+  let globalObj = JS_GetGlobalObject(js.context)
+  discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc, 
+                                   JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
+  JS_FreeValue(js.context, globalObj)
