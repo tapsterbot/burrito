@@ -139,11 +139,40 @@ proc myFunction(ctx: ptr JSContext, arg: JSValue): JSValue =
 
 **Exception**: Variadic functions (`NimFunctionVariadic`) automatically handle freeing the `args` sequence elements - you don't need to free them manually.
 
+## Thread Safety
+
+**⚠️ IMPORTANT**: QuickJS instances are **NOT thread-safe**. You have two options:
+
+### Option 1: One Instance Per Thread (Recommended)
+```nim
+# Each thread should create its own QuickJS instance
+proc workerThread() {.thread.} =
+  var js = newQuickJS()  # Create instance in this thread
+  defer: js.close()
+  echo js.eval("2 + 2")  # Safe - only this thread uses this instance
+```
+
+### Option 2: External Synchronization
+If you must share an instance across threads, use locks:
+```nim
+import std/locks
+
+var 
+  js = newQuickJS()
+  jsLock: Lock
+
+initLock(jsLock)
+
+proc safeEval(code: string): string =
+  withLock jsLock:
+    return js.eval(code)  # Protected by lock
+```
+
 ## API Reference
 
 ### Types
 
-- `QuickJS`: Main wrapper object containing runtime and context
+- `QuickJS`: Main wrapper object containing runtime and context (⚠️ NOT thread-safe)
 - `JSValue`: JavaScript value type (native QuickJS value)
 - `JSException`: Exception type for JavaScript errors
 - `NimFunction0*`: Function type with no arguments: `proc(ctx: ptr JSContext): JSValue`
@@ -155,7 +184,7 @@ proc myFunction(ctx: ptr JSContext, arg: JSValue): JSValue =
 ### Core Functions
 
 #### `newQuickJS(): QuickJS`
-Creates a new QuickJS instance with runtime and context.
+Creates a new QuickJS instance with runtime and context. **Not thread-safe** - use one instance per thread or external locking.
 
 #### `close(js: var QuickJS)`
 Properly cleans up QuickJS instance (called automatically with `defer`).

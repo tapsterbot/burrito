@@ -158,6 +158,15 @@ type
     context*: ptr JSContext
   
   QuickJS* = object
+    ## QuickJS wrapper object containing runtime and context
+    ## 
+    ## ⚠️  THREAD SAFETY WARNING:
+    ## QuickJS instances are NOT thread-safe. You must either:
+    ## 1. Access each QuickJS instance from only one thread (recommended), OR
+    ## 2. Use external synchronization (Lock/Mutex) around ALL QuickJS method calls
+    ##    if sharing an instance across threads
+    ##
+    ## Each thread should ideally have its own QuickJS instance for best performance.
     runtime*: ptr JSRuntime
     context*: ptr JSContext
     contextData*: ptr BurritoContextData
@@ -260,6 +269,9 @@ proc nimFunctionTrampoline(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint
 # Core QuickJS wrapper
 proc newQuickJS*(): QuickJS =
   ## Create a new QuickJS instance with runtime and context
+  ## 
+  ## ⚠️  THREAD SAFETY: The returned QuickJS instance is NOT thread-safe.
+  ## Use one instance per thread or implement external locking.
   let rt = JS_NewRuntime()
   if rt == nil:
     raise newException(JSException, "Failed to create QuickJS runtime")
