@@ -16,6 +16,8 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 - Nim >= 2.2.4
 - C compiler (gcc/clang)
 - Make
+- curl (for downloading QuickJS source)
+- tar with xz support (usually pre-installed on Linux/macOS)
 
 ### Install Steps
 
@@ -25,13 +27,10 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
    cd burrito
    ```
 
-2. **Build QuickJS library:**
+2. **Download and build QuickJS:**
    ```bash
+   nimble get_quickjs
    nimble build_lib
-   ```
-   Or manually:
-   ```bash
-   cd quickjs && make
    ```
 
 3. **Install the package:**
