@@ -1,6 +1,6 @@
 # Burrito 🌯
 
-A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/quickjs). This wrapper provides a Nim interface to embed JavaScript execution and expose Nim functions to JavaScript code.
+A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/quickjs).
 
 ## Features
 
@@ -95,11 +95,14 @@ import burrito
 # Different function signatures are supported
 proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
   let num = toNimFloat(ctx, arg)
+  JS_FreeValue(ctx, arg)  # Must free JSValue arguments
   nimFloatToJS(ctx, num * num)
 
 proc addNumbers(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue =
   let a = toNimFloat(ctx, arg1)
   let b = toNimFloat(ctx, arg2)
+  JS_FreeValue(ctx, arg1)  # Must free JSValue arguments
+  JS_FreeValue(ctx, arg2)
   nimFloatToJS(ctx, a + b)
 
 proc concatenate(ctx: ptr JSContext, args: seq[JSValue]): JSValue =
@@ -120,6 +123,21 @@ echo js.eval("square(7)")                       # 49
 echo js.eval("add(5, 3)")                       # 8
 echo js.eval("concat('Hello', ' ', 'World!')")  # Hello World!
 ```
+
+## Memory Management
+
+**⚠️ IMPORTANT**: When writing Nim functions that accept JSValue arguments, you **must** call `JS_FreeValue(ctx, arg)` for each JSValue argument after you're done using it, unless you transfer ownership to another QuickJS object.
+
+JSValue arguments are automatically duplicated when passed to your Nim functions, so you're responsible for freeing them:
+
+```nim
+proc myFunction(ctx: ptr JSContext, arg: JSValue): JSValue =
+  let value = toNimString(ctx, arg)
+  JS_FreeValue(ctx, arg)  # ✅ Required! Free the argument
+  return nimStringToJS(ctx, "processed: " & value)
+```
+
+**Exception**: Variadic functions (`NimFunctionVariadic`) automatically handle freeing the `args` sequence elements - you don't need to free them manually.
 
 ## API Reference
 

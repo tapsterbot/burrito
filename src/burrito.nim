@@ -121,6 +121,19 @@ proc jsFalse*(ctx: ptr JSContext): JSValue =
 # High-level wrapper types
 type
   # Nim function signatures that can be registered (context-aware)
+  # 
+  # IMPORTANT: JSValue Memory Management
+  # All JSValue arguments passed to these functions are duplicated (JS_DupValue)
+  # and the user's Nim function is responsible for calling JS_FreeValue on them
+  # when they are no longer needed, unless their ownership is transferred to
+  # another QuickJS object (e.g., by storing them in a JS object or array).
+  #
+  # Example:
+  #   proc myFunc(ctx: ptr JSContext, arg: JSValue): JSValue =
+  #     let str = toNimString(ctx, arg)
+  #     JS_FreeValue(ctx, arg)  # Must free the argument
+  #     return nimStringToJS(ctx, "processed: " & str)
+  #
   NimFunction0* = proc(ctx: ptr JSContext): JSValue {.nimcall.}
   NimFunction1* = proc(ctx: ptr JSContext, arg: JSValue): JSValue {.nimcall.}
   NimFunction2* = proc(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue {.nimcall.}
@@ -312,6 +325,8 @@ proc setJSFunction*(js: QuickJS, name: string, value: string) =
 # Native C function registration methods
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction0) =
   ## Register a Nim function with no arguments to be callable from JavaScript
+  ## 
+  ## Note: Since this function takes no arguments, no JSValue memory management is required.
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -326,6 +341,9 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction0) =
 
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction1) =
   ## Register a Nim function with one argument to be callable from JavaScript
+  ## 
+  ## IMPORTANT: The JSValue argument passed to your function is duplicated and must be
+  ## freed with JS_FreeValue(ctx, arg) unless ownership is transferred elsewhere.
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -340,6 +358,9 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction1) =
 
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction2) =
   ## Register a Nim function with two arguments to be callable from JavaScript
+  ## 
+  ## IMPORTANT: The JSValue arguments passed to your function are duplicated and must be
+  ## freed with JS_FreeValue(ctx, argN) unless ownership is transferred elsewhere.
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -354,6 +375,9 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction2) =
 
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction3) =
   ## Register a Nim function with three arguments to be callable from JavaScript
+  ## 
+  ## IMPORTANT: The JSValue arguments passed to your function are duplicated and must be
+  ## freed with JS_FreeValue(ctx, argN) unless ownership is transferred elsewhere.
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -368,6 +392,11 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction3) =
 
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunctionVariadic) =
   ## Register a Nim function with variadic arguments to be callable from JavaScript
+  ## 
+  ## IMPORTANT: The JSValue arguments in the args sequence are duplicated and must be
+  ## freed with JS_FreeValue(ctx, arg) for each arg unless ownership is transferred elsewhere.
+  ## Note: The variadic case is handled automatically by the trampoline - you don't need
+  ## to free the args sequence elements manually.
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   

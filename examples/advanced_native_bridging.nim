@@ -11,6 +11,7 @@ proc getCurrentTimestamp(ctx: ptr JSContext): JSValue =
 # One argument - square a number
 proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
   let num = toNimFloat(ctx, arg)
+  JS_FreeValue(ctx, arg)  # Free the argument
   let squared = num * num
   result = nimFloatToJS(ctx, squared)
 
@@ -18,6 +19,8 @@ proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
 proc addNumbers(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue =
   let a = toNimFloat(ctx, arg1)
   let b = toNimFloat(ctx, arg2)
+  JS_FreeValue(ctx, arg1)  # Free the arguments
+  JS_FreeValue(ctx, arg2)
   result = nimFloatToJS(ctx, a + b)
 
 # Three arguments - calculate volume of a box
@@ -25,6 +28,9 @@ proc boxVolume(ctx: ptr JSContext, length, width, height: JSValue): JSValue =
   let l = toNimFloat(ctx, length)
   let w = toNimFloat(ctx, width)
   let h = toNimFloat(ctx, height)
+  JS_FreeValue(ctx, length)  # Free the arguments
+  JS_FreeValue(ctx, width)
+  JS_FreeValue(ctx, height)
   result = nimFloatToJS(ctx, l * w * h)
 
 # Variadic arguments - concatenate strings
@@ -38,6 +44,7 @@ proc concatenateStrings(ctx: ptr JSContext, args: seq[JSValue]): JSValue =
 # More complex function - factorial
 proc factorial(ctx: ptr JSContext, arg: JSValue): JSValue =
   let n = toNimInt(ctx, arg)
+  JS_FreeValue(ctx, arg)  # Free the argument
   if n < 0:
     result = nimStringToJS(ctx, "Error: Factorial undefined for negative numbers")
   elif n == 0 or n == 1:
