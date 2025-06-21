@@ -45,7 +45,7 @@ proc JS_FreeContext*(ctx: ptr JSContext)
 # Value operations
 proc JS_NewInt32*(ctx: ptr JSContext, val: int32): JSValue
 proc JS_NewFloat64*(ctx: ptr JSContext, val: float64): JSValue
-proc JS_NewString*(ctx: ptr JSContext, str: cstring): JSValue
+proc JS_NewStringLen*(ctx: ptr JSContext, str: cstring, len: csize_t): JSValue
 proc JS_NewBool*(ctx: ptr JSContext, val: cint): JSValue
 proc JS_NewObject*(ctx: ptr JSContext): JSValue
 
@@ -169,7 +169,7 @@ proc toNimBool*(ctx: ptr JSContext, val: JSValueConst): bool =
 
 # Conversion from Nim types to JSValue
 proc nimStringToJS*(ctx: ptr JSContext, str: string): JSValue =
-  JS_NewString(ctx, str.cstring)
+  JS_NewStringLen(ctx, str.cstring, str.len.csize_t)
 
 proc nimIntToJS*(ctx: ptr JSContext, val: int32): JSValue =
   JS_NewInt32(ctx, val)
@@ -275,7 +275,7 @@ proc evalWithGlobals*(js: QuickJS, code: string, globals: Table[string, string] 
   ## Evaluate JavaScript code with some global variables set as strings
   # Set global variables as strings
   for key, value in globals:
-    let jsVal = JS_NewString(js.context, value.cstring)
+    let jsVal = JS_NewStringLen(js.context, value.cstring, value.len.csize_t)
     let globalObj = JS_GetGlobalObject(js.context)
     discard JS_DefinePropertyValueStr(js.context, globalObj, key.cstring, jsVal, 
                                      JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
