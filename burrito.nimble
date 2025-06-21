@@ -20,11 +20,9 @@ task examples, "Run all examples":
   exec "nim c -r --hints:off examples/basic_example.nim"
   exec "nim c -r --hints:off examples/call_nim_from_js.nim"
   exec "nim c -r --hints:off examples/advanced_native_bridging.nim"
-  exec "nim c -r --hints:off examples/object_manipulation.nim"
-  exec "nim c -r --hints:off examples/advanced_functions.nim"
-  exec "nim c -r --hints:off examples/type_marshaling.nim"
-  exec "nim c -r --hints:off examples/auto_memory_management.nim"
-  exec "nim c -r --hints:off examples/idiomatic_syntax.nim"
+  exec "nim c -r --hints:off examples/comprehensive_features.nim"
+  exec "nim c -r --hints:off examples/idiomatic_patterns.nim"
+  exec "nim c -r --hints:off examples/type_system.nim"
   echo ""
 
 task get_quickjs, "Download and extract latest QuickJS source":
@@ -56,7 +54,7 @@ task delete_quickjs, "Remove QuickJS source directory":
 
 task clean_nim, "Clean compiled Nim binaries":
   echo "🧹 Cleaning compiled Nim binaries..."
-  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/object_manipulation examples/advanced_functions examples/type_marshaling examples/auto_memory_management examples/idiomatic_syntax"
+  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/comprehensive_features examples/idiomatic_patterns examples/type_system"
   echo "✅ Nim binaries cleaned"
 
 task clean_all, "Clean build artifacts":
@@ -65,7 +63,7 @@ task clean_all, "Clean build artifacts":
     echo "🧹 Cleaning QuickJS build artifacts..."
     exec "cd quickjs && make clean"
   echo "🧹 Removing compiled Nim binaries..."
-  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/object_manipulation examples/advanced_functions examples/type_marshaling examples/auto_memory_management examples/idiomatic_syntax"
+  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/comprehensive_features examples/idiomatic_patterns examples/type_system"
   echo "✅ Clean completed"
 
 task test, "Run tests and examples":

@@ -506,66 +506,30 @@ type
     of jvkObject: objRepr*: string  # JSON representation
     of jvkArray: arrRepr*: string   # JSON representation
 
-# More accurate type checking using emit (for autoDetect only)
-proc isUndefinedAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsUndefined(`val`);".}
-  checkResult != 0
-
-proc isNullAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsNull(`val`);".}
-  checkResult != 0
-
-proc isBoolAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsBool(`val`);".}
-  checkResult != 0
-
-proc isNumberAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsNumber(`val`);".}
-  checkResult != 0
-
-proc isStringAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsString(`val`);".}
-  checkResult != 0
-
-proc isObjectAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsObject(`val`);".}
-  checkResult != 0
-
-proc isArrayAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
-  var checkResult: cint
-  {.emit: "`checkResult` = JS_IsArray(`ctx`, `val`);".}
-  checkResult != 0
-
 proc autoDetect*(ctx: ptr JSContext, name: string): JSAutoDetectedValue =
   ## Automatically detect the JavaScript type and return appropriate Nim value
   withGlobalObject(ctx, globalObj):
     let jsVal = getProperty(ctx, globalObj, name)
     defer: JS_FreeValue(ctx, jsVal)
     
-    if isUndefinedAccurate(ctx, jsVal):
+    if isUndefined(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkUndefined)
-    elif isNullAccurate(ctx, jsVal):
+    elif isNull(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkNull)
-    elif isBoolAccurate(ctx, jsVal):
+    elif isBool(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkBool, boolVal: toNimBool(ctx, jsVal))
-    elif isNumberAccurate(ctx, jsVal):
+    elif isNumber(ctx, jsVal):
       let floatVal = toNimFloat(ctx, jsVal)
       # Check if it's an integer
       if floatVal == floatVal.int.float64:
         result = JSAutoDetectedValue(kind: jvkInt, intVal: floatVal.int)
       else:
         result = JSAutoDetectedValue(kind: jvkFloat, floatVal: floatVal)
-    elif isArrayAccurate(ctx, jsVal):
+    elif isArray(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkArray, arrRepr: toNimString(ctx, jsVal))
-    elif isObjectAccurate(ctx, jsVal):
+    elif isObject(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkObject, objRepr: toNimString(ctx, jsVal))
-    elif isStringAccurate(ctx, jsVal):
+    elif isString(ctx, jsVal):
       result = JSAutoDetectedValue(kind: jvkString, strVal: toNimString(ctx, jsVal))
     else:
       # Fallback to string
