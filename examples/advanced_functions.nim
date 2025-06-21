@@ -5,25 +5,11 @@ import std/strutils
 proc processUser(ctx: ptr JSContext, userObj: JSValue): JSValue =
   # Check if it's actually an object
   if not isObject(ctx, userObj):
-    JS_FreeValue(ctx, userObj)
     return JS_ThrowTypeError(ctx, "Expected an object")
   
-  # Extract user data
-  let nameVal = getProperty(ctx, userObj, "name")
-  let ageVal = getProperty(ctx, userObj, "age")
-  defer:
-    JS_FreeValue(ctx, userObj)  # Free the argument
-    JS_FreeValue(ctx, nameVal)
-    JS_FreeValue(ctx, ageVal)
-  
-  # Validate data types
-  if not isString(ctx, nameVal):
-    return JS_ThrowTypeError(ctx, "Name must be a string")
-  if not isNumber(ctx, ageVal):
-    return JS_ThrowTypeError(ctx, "Age must be a number")
-  
-  let name = toNimString(ctx, nameVal)
-  let age = toNimInt(ctx, ageVal)
+  # Extract and validate user data using auto-memory management
+  let name = getPropertyValue(ctx, userObj, "name", string)
+  let age = getPropertyValue(ctx, userObj, "age", int32)
   
   # Create result object
   let resultObj = JS_NewObject(ctx)
@@ -39,11 +25,9 @@ proc processUser(ctx: ptr JSContext, userObj: JSValue): JSValue =
 # Function that creates and returns a JavaScript array
 proc createNumberArray(ctx: ptr JSContext, count: JSValue): JSValue =
   if not isNumber(ctx, count):
-    JS_FreeValue(ctx, count)
     return JS_ThrowTypeError(ctx, "Count must be a number")
   
   let n = toNimInt(ctx, count)
-  JS_FreeValue(ctx, count)
   
   if n < 0 or n > 1000:
     return JS_ThrowRangeError(ctx, "Count must be between 0 and 1000")
@@ -57,28 +41,20 @@ proc createNumberArray(ctx: ptr JSContext, count: JSValue): JSValue =
 # Function that works with arrays
 proc sumArray(ctx: ptr JSContext, arr: JSValue): JSValue =
   if not isArray(ctx, arr):
-    JS_FreeValue(ctx, arr)
     return JS_ThrowTypeError(ctx, "Expected an array")
   
   let length = getArrayLength(ctx, arr)
   var sum: float64 = 0
   
   for i in 0..<length:
-    let element = getArrayElement(ctx, arr, i)
-    defer: JS_FreeValue(ctx, element)
-    
-    if isNumber(ctx, element):
-      sum += toNimFloat(ctx, element)
+    withArrayElement(ctx, arr, i, element):
+      if isNumber(ctx, element):
+        sum += toNimFloat(ctx, element)
   
-  JS_FreeValue(ctx, arr)
   return nimFloatToJS(ctx, sum)
 
 # Function that demonstrates error handling
 proc safeDivide(ctx: ptr JSContext, a: JSValue, b: JSValue): JSValue =
-  defer:
-    JS_FreeValue(ctx, a)
-    JS_FreeValue(ctx, b)
-  
   if not isNumber(ctx, a) or not isNumber(ctx, b):
     return JS_ThrowTypeError(ctx, "Both arguments must be numbers")
   

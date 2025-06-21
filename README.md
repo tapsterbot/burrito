@@ -97,14 +97,13 @@ import burrito
 # Different function signatures are supported
 proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
   let num = toNimFloat(ctx, arg)
-  JS_FreeValue(ctx, arg)  # Must free JSValue arguments
+  # No manual freeing needed - handled automatically! ✨
   nimFloatToJS(ctx, num * num)
 
 proc addNumbers(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue =
   let a = toNimFloat(ctx, arg1)
   let b = toNimFloat(ctx, arg2)
-  JS_FreeValue(ctx, arg1)  # Must free JSValue arguments
-  JS_FreeValue(ctx, arg2)
+  # No manual freeing needed - handled automatically! ✨
   nimFloatToJS(ctx, a + b)
 
 proc concatenate(ctx: ptr JSContext, args: seq[JSValue]): JSValue =
@@ -128,18 +127,15 @@ echo js.eval("concat('Hello', ' ', 'World!')")  # Hello World!
 
 ## Memory Management
 
-**⚠️ IMPORTANT**: When writing Nim functions that accept JSValue arguments, you **must** call `JS_FreeValue(ctx, arg)` for each JSValue argument after you're done using it, unless you transfer ownership to another QuickJS object.
-
-JSValue arguments are automatically duplicated when passed to your Nim functions, so you're responsible for freeing them:
+Burrito is memory-safe by design. All JavaScript values are automatically managed - just write your functions naturally:
 
 ```nim
-proc myFunction(ctx: ptr JSContext, arg: JSValue): JSValue =
-  let value = toNimString(ctx, arg)
-  JS_FreeValue(ctx, arg)  # ✅ Required! Free the argument
-  return nimStringToJS(ctx, "processed: " & value)
+proc processText(ctx: ptr JSContext, text: JSValue): JSValue =
+  let input = toNimString(ctx, text)
+  return nimStringToJS(ctx, input.toUpper())
 ```
 
-**Exception**: Variadic functions (`NimFunctionVariadic`) automatically handle freeing the `args` sequence elements - you don't need to free them manually.
+Memory cleanup happens automatically when functions return. Property access and array helpers also handle their own cleanup.
 
 ## Thread Safety
 
@@ -240,6 +236,62 @@ Registers a Nim function to be callable from JavaScript using native C function 
 - `setArrayElement(ctx: ptr JSContext, arr: JSValueConst, index: uint32, value: JSValue): bool`
 - `getArrayLength(ctx: ptr JSContext, arr: JSValueConst): uint32`
 
+### Auto-Memory Management Helpers
+
+These functions automatically handle `JS_FreeValue` for you, making memory management effortless:
+
+#### Direct Value Access (No Manual Freeing!)
+- `getPropertyValue[T](ctx: ptr JSContext, obj: JSValueConst, key: string, target: typedesc[T]): T`
+- `getArrayElementValue[T](ctx: ptr JSContext, arr: JSValueConst, index: uint32, target: typedesc[T]): T`
+- `setGlobalProperty[T](ctx: ptr JSContext, name: string, value: T): bool`
+- `getGlobalProperty[T](ctx: ptr JSContext, name: string, target: typedesc[T]): T`
+
+#### Scoped Access Templates
+- `withGlobalObject(ctx, globalVar, body)` - Auto-manage global object lifetime
+- `withProperty(ctx, obj, key, propVar, body)` - Auto-manage property lifetime
+- `withArrayElement(ctx, arr, index, elemVar, body)` - Auto-manage array element lifetime
+
+#### High-level Iteration
+- `iterateArray(ctx: ptr JSContext, arr: JSValueConst, callback)` - Iterate with auto memory management
+- `collectArray[T](ctx: ptr JSContext, arr: JSValueConst, target: typedesc[T]): seq[T]` - Collect to sequence
+
+**Examples:**
+```nim
+# Old way (manual memory management)
+let globalObj = JS_GetGlobalObject(ctx)
+let nameVal = getProperty(ctx, globalObj, "userName")
+defer:
+  JS_FreeValue(ctx, globalObj)
+  JS_FreeValue(ctx, nameVal)
+let name = toNimString(ctx, nameVal)
+
+# New ways (automatic memory management + idiomatic syntax)
+let name = ctx.getString("userName")          # Type-specific method
+let name = ctx.get("userName", string)       # Generic method  
+ctx["userName"] = "Alice"                    # Idiomatic assignment
+```
+
+### Idiomatic Syntax Helpers
+
+Burrito provides beautiful, Nim-like syntax for common operations:
+
+#### Global Property Access
+```nim
+# Type-specific methods (recommended)
+let name = ctx.getString("userName")
+let age = ctx.getInt("userAge")
+let score = ctx.getFloat("userScore")
+let active = ctx.getBool("isActive")
+
+# Generic method
+let name = ctx.get("userName", string)
+
+# Assignment (works with any type)
+ctx["userName"] = "Alice"
+ctx["userAge"] = 30
+ctx.set("userScore", 95.5)
+```
+
 ### Comprehensive Type Marshaling
 
 Burrito provides advanced type marshaling capabilities for seamless conversion between Nim data structures and JavaScript values.
@@ -330,6 +382,8 @@ nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridg
 nim c -r examples/object_manipulation.nim       # Object and array manipulation
 nim c -r examples/advanced_functions.nim        # Advanced functions with type checking
 nim c -r examples/type_marshaling.nim           # Comprehensive type marshaling
+nim c -r examples/auto_memory_management.nim    # Automatic memory management helpers
+nim c -r examples/idiomatic_syntax.nim          # Beautiful idiomatic Nim syntax
 ```
 
 Or run all examples at once:

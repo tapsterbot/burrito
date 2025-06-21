@@ -27,33 +27,16 @@ proc personToJS*(ctx: ptr JSContext, person: Person): JSValue =
   return obj
 
 proc jsToPersonOverArg*(ctx: ptr JSContext, jsObj: JSValue, person: var Person) =
-  # Extract person data from JavaScript object
-  let nameVal = getProperty(ctx, jsObj, "name")
-  let ageVal = getProperty(ctx, jsObj, "age") 
-  let emailVal = getProperty(ctx, jsObj, "email")
-  defer:
-    JS_FreeValue(ctx, jsObj)
-    JS_FreeValue(ctx, nameVal)
-    JS_FreeValue(ctx, ageVal)
-    JS_FreeValue(ctx, emailVal)
-  
-  person.name = toNimString(ctx, nameVal)
-  person.age = toNimInt(ctx, ageVal).int
-  person.email = toNimString(ctx, emailVal)
+  # Extract person data using auto-memory management
+  person.name = getPropertyValue(ctx, jsObj, "name", string)
+  person.age = getPropertyValue(ctx, jsObj, "age", int32).int
+  person.email = getPropertyValue(ctx, jsObj, "email", string)
 
 proc jsToPerson*(ctx: ptr JSContext, jsObj: JSValueConst): Person =
-  let nameVal = getProperty(ctx, jsObj, "name")
-  let ageVal = getProperty(ctx, jsObj, "age") 
-  let emailVal = getProperty(ctx, jsObj, "email")
-  defer:
-    JS_FreeValue(ctx, nameVal)
-    JS_FreeValue(ctx, ageVal)
-    JS_FreeValue(ctx, emailVal)
-  
   result = Person(
-    name: toNimString(ctx, nameVal),
-    age: toNimInt(ctx, ageVal).int,
-    email: toNimString(ctx, emailVal)
+    name: getPropertyValue(ctx, jsObj, "name", string),
+    age: getPropertyValue(ctx, jsObj, "age", int32).int,
+    email: getPropertyValue(ctx, jsObj, "email", string)
   )
 
 proc companyToJS*(ctx: ptr JSContext, company: Company): JSValue =
@@ -72,7 +55,6 @@ proc companyToJS*(ctx: ptr JSContext, company: Company): JSValue =
 # Nim functions that work with marshaled types
 proc processPersonData(ctx: ptr JSContext, personObj: JSValue): JSValue =
   let person = jsToPerson(ctx, personObj)
-  JS_FreeValue(ctx, personObj)
   
   # Process the person data
   let processedPerson = Person(
@@ -98,7 +80,6 @@ proc processPersonData(ctx: ptr JSContext, personObj: JSValue): JSValue =
 
 proc createPersonArray(ctx: ptr JSContext, count: JSValue): JSValue =
   let n = toNimInt(ctx, count)
-  JS_FreeValue(ctx, count)
   
   let arr = newArray(ctx)
   for i in 0..<n:
@@ -117,7 +98,6 @@ proc processCompany(ctx: ptr JSContext, companyData: JSValue): JSValue =
   let foundedVal = getProperty(ctx, companyData, "founded")
   let employeesVal = getProperty(ctx, companyData, "employees")
   defer:
-    JS_FreeValue(ctx, companyData)
     JS_FreeValue(ctx, nameVal)
     JS_FreeValue(ctx, foundedVal)
     JS_FreeValue(ctx, employeesVal)

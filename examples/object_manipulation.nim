@@ -24,26 +24,20 @@ proc main() =
   let personObj = js.eval(jsCode1)
   echo "Created object: ", personObj
   
-  # Get the person object to manipulate from Nim
-  let globalObj = JS_GetGlobalObject(js.context)
-  let person = getProperty(js.context, globalObj, "person")
-  defer: 
-    JS_FreeValue(js.context, globalObj)
-    JS_FreeValue(js.context, person)
-  
-  # Read properties from Nim
-  let nameVal = getProperty(js.context, person, "name")
-  let ageVal = getProperty(js.context, person, "age")
-  defer:
-    JS_FreeValue(js.context, nameVal)
-    JS_FreeValue(js.context, ageVal)
-  
-  echo "Name from Nim: ", toNimString(js.context, nameVal)
-  echo "Age from Nim: ", toNimInt(js.context, ageVal)
-  
-  # Set new property from Nim (setProperty takes ownership of the value)
-  let emailVal = nimStringToJS(js.context, "alice@example.com")
-  discard setProperty(js.context, person, "email", emailVal)
+  # Read and modify properties from Nim using idiomatic syntax
+  withGlobalObject(js.context, globalObj):
+    let person = getProperty(js.context, globalObj, "person")
+    defer: JS_FreeValue(js.context, person)
+    
+    let name = getPropertyValue(js.context, person, "name", string)
+    let age = getPropertyValue(js.context, person, "age", int)
+    
+    echo "Name from Nim: ", name
+    echo "Age from Nim: ", age
+    
+    # Set new property from Nim
+    let emailVal = nimStringToJS(js.context, "alice@example.com")
+    discard setProperty(js.context, person, "email", emailVal)
   
   echo "After adding email: ", js.eval("JSON.stringify(person)")
   
@@ -63,20 +57,21 @@ proc main() =
   discard setArrayElement(js.context, arr, 2, cherry)
   
   # Set array as global variable (this transfers ownership)
-  discard setProperty(js.context, globalObj, "fruits", arr)
+  withGlobalObject(js.context, globalObjForFruits):
+    discard setProperty(js.context, globalObjForFruits, "fruits", arr)
   
   echo "Array created from Nim: ", js.eval("JSON.stringify(fruits)")
   
-  # Get array length from the global array
-  let fruitsArray = getProperty(js.context, globalObj, "fruits")
-  defer: JS_FreeValue(js.context, fruitsArray)
-  echo "Array length: ", getArrayLength(js.context, fruitsArray)
-  
-  # Read array elements from Nim
-  for i in 0..<getArrayLength(js.context, fruitsArray):
-    let element = getArrayElement(js.context, fruitsArray, i.uint32)
-    defer: JS_FreeValue(js.context, element)
-    echo "Element ", i, ": ", toNimString(js.context, element)
+  # Get array length using idiomatic syntax
+  withGlobalObject(js.context, globalObjForArray):
+    let fruitsArray = getProperty(js.context, globalObjForArray, "fruits")
+    defer: JS_FreeValue(js.context, fruitsArray)
+    echo "Array length: ", getArrayLength(js.context, fruitsArray)
+    
+    # Read array elements using auto-memory management
+    for i in 0..<getArrayLength(js.context, fruitsArray):
+      let element = getArrayElementValue(js.context, fruitsArray, i.uint32, string)
+      echo "Element ", i, ": ", element
 
 proc typeCheckingDemo() =
   echo "\n3. Type Checking from Nim:"
@@ -97,9 +92,6 @@ proc typeCheckingDemo() =
     var nul = null;
   """)
   
-  let globalObj = JS_GetGlobalObject(js.context)
-  defer: JS_FreeValue(js.context, globalObj)
-  
   let values = [
     ("str", "string"),
     ("num", "number"), 
@@ -111,21 +103,20 @@ proc typeCheckingDemo() =
     ("nul", "null")
   ]
   
-  for (varName, expectedType) in values:
-    let val = getProperty(js.context, globalObj, varName)
-    defer: JS_FreeValue(js.context, val)
-    
-    var actualType = "unknown"
-    if isString(js.context, val): actualType = "string"
-    elif isNumber(js.context, val): actualType = "number"
-    elif isBool(js.context, val): actualType = "boolean"
-    elif isArray(js.context, val): actualType = "array"
-    elif isFunction(js.context, val): actualType = "function"
-    elif isUndefined(js.context, val): actualType = "undefined"
-    elif isNull(js.context, val): actualType = "null"
-    elif isObject(js.context, val): actualType = "object"
-    
-    echo varName, " is ", actualType, " (expected: ", expectedType, ")"
+  withGlobalObject(js.context, globalObj):
+    for (varName, expectedType) in values:
+      withProperty(js.context, globalObj, varName, val):
+        var actualType = "unknown"
+        if isString(js.context, val): actualType = "string"
+        elif isNumber(js.context, val): actualType = "number"
+        elif isBool(js.context, val): actualType = "boolean"
+        elif isArray(js.context, val): actualType = "array"
+        elif isFunction(js.context, val): actualType = "function"
+        elif isUndefined(js.context, val): actualType = "undefined"
+        elif isNull(js.context, val): actualType = "null"
+        elif isObject(js.context, val): actualType = "object"
+        
+        echo varName, " is ", actualType, " (expected: ", expectedType, ")"
 
 proc complexObjectDemo() =
   echo "\n4. Complex Object Manipulation:"
@@ -135,40 +126,38 @@ proc complexObjectDemo() =
   defer: js.close()
   
   # Create a complex nested structure from Nim
-  let globalObj = JS_GetGlobalObject(js.context)
-  defer: JS_FreeValue(js.context, globalObj)
-  
-  # Create main object
-  let config = JS_NewObject(js.context)
-  
-  # Create nested objects
-  let database = JS_NewObject(js.context)
-  let server = JS_NewObject(js.context)
-  
-  # Set database config (setProperty takes ownership of values)
-  discard setProperty(js.context, database, "host", nimStringToJS(js.context, "localhost"))
-  discard setProperty(js.context, database, "port", nimIntToJS(js.context, 5432))
-  discard setProperty(js.context, database, "name", nimStringToJS(js.context, "myapp"))
-  
-  # Set server config
-  discard setProperty(js.context, server, "host", nimStringToJS(js.context, "0.0.0.0"))
-  discard setProperty(js.context, server, "port", nimIntToJS(js.context, 8080))
-  discard setProperty(js.context, server, "ssl", nimBoolToJS(js.context, true))
-  
-  # Create features array
-  let features = newArray(js.context)
-  discard setArrayElement(js.context, features, 0, nimStringToJS(js.context, "authentication"))
-  discard setArrayElement(js.context, features, 1, nimStringToJS(js.context, "logging"))
-  discard setArrayElement(js.context, features, 2, nimStringToJS(js.context, "caching"))
-  
-  # Assemble main config (all these transfer ownership)
-  discard setProperty(js.context, config, "database", database)
-  discard setProperty(js.context, config, "server", server)
-  discard setProperty(js.context, config, "features", features)
-  discard setProperty(js.context, config, "version", nimStringToJS(js.context, "1.0.0"))
-  
-  # Set as global (this transfers ownership of config)
-  discard setProperty(js.context, globalObj, "config", config)
+  withGlobalObject(js.context, globalObj):
+    # Create main object
+    let config = JS_NewObject(js.context)
+    
+    # Create nested objects
+    let database = JS_NewObject(js.context)
+    let server = JS_NewObject(js.context)
+    
+    # Set database config (setProperty takes ownership of values)
+    discard setProperty(js.context, database, "host", nimStringToJS(js.context, "localhost"))
+    discard setProperty(js.context, database, "port", nimIntToJS(js.context, 5432))
+    discard setProperty(js.context, database, "name", nimStringToJS(js.context, "myapp"))
+    
+    # Set server config
+    discard setProperty(js.context, server, "host", nimStringToJS(js.context, "0.0.0.0"))
+    discard setProperty(js.context, server, "port", nimIntToJS(js.context, 8080))
+    discard setProperty(js.context, server, "ssl", nimBoolToJS(js.context, true))
+    
+    # Create features array
+    let features = newArray(js.context)
+    discard setArrayElement(js.context, features, 0, nimStringToJS(js.context, "authentication"))
+    discard setArrayElement(js.context, features, 1, nimStringToJS(js.context, "logging"))
+    discard setArrayElement(js.context, features, 2, nimStringToJS(js.context, "caching"))
+    
+    # Assemble main config (all these transfer ownership)
+    discard setProperty(js.context, config, "database", database)
+    discard setProperty(js.context, config, "server", server)
+    discard setProperty(js.context, config, "features", features)
+    discard setProperty(js.context, config, "version", nimStringToJS(js.context, "1.0.0"))
+    
+    # Set as global (this transfers ownership of config)
+    discard setProperty(js.context, globalObj, "config", config)
   
   echo "Complex config created from Nim:"
   echo js.eval("JSON.stringify(config, null, 2)")

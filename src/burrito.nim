@@ -4,7 +4,7 @@
 ## This module provides basic functionality to create JS contexts,
 ## evaluate JavaScript code, and expose Nim functions to JavaScript.
 
-import std/[tables, strutils, macros, json]
+import std/[tables, macros, json, strutils]
 
 const 
   quickjsPath = when defined(windows): 
@@ -87,8 +87,7 @@ proc JS_ThrowInternalError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs
 # Global object
 proc JS_GetGlobalObject*(ctx: ptr JSContext): JSValue
 
-# Type checking functions would go here if we had proper QuickJS inline function access
-# Currently using fallback implementations in the high-level helpers below
+# Type checking functions - removed since inline functions are problematic
 
 # Object and property manipulation
 proc JS_GetProperty*(ctx: ptr JSContext, thisObj: JSValueConst, prop: JSAtom): JSValue
@@ -153,16 +152,17 @@ proc jsFalse*(ctx: ptr JSContext): JSValue =
 type
   # Nim function signatures that can be registered (context-aware)
   # 
-  # IMPORTANT: JSValue Memory Management
-  # All JSValue arguments passed to these functions are duplicated (JS_DupValue)
-  # and the user's Nim function is responsible for calling JS_FreeValue on them
-  # when they are no longer needed, unless their ownership is transferred to
-  # another QuickJS object (e.g., by storing them in a JS object or array).
+  # AUTOMATIC MEMORY MANAGEMENT:
+  # JSValue arguments passed to fixed-arity functions (NimFunction1/2/3) are
+  # automatically freed by the trampoline - you don't need to call JS_FreeValue!
+  # 
+  # For variadic functions (NimFunctionVariadic), the args sequence elements
+  # are also automatically freed by the trampoline.
   #
-  # Example:
+  # Example (no manual freeing needed):
   #   proc myFunc(ctx: ptr JSContext, arg: JSValue): JSValue =
   #     let str = toNimString(ctx, arg)
-  #     JS_FreeValue(ctx, arg)  # Must free the argument
+  #     # No need to call JS_FreeValue(ctx, arg) - handled automatically!
   #     return nimStringToJS(ctx, "processed: " & str)
   #
   NimFunction0* = proc(ctx: ptr JSContext): JSValue {.nimcall.}
@@ -246,7 +246,7 @@ proc nimBoolToJS*(ctx: ptr JSContext, val: bool): JSValue =
 
 # Advanced type marshaling functions are added after basic functions are defined
 
-# High-level type checking helpers (fallback implementation using conversion attempts)
+# High-level type checking helpers (fallback implementation for compatibility)
 proc isUndefined*(ctx: ptr JSContext, val: JSValueConst): bool =
   # Check if converting to string gives "undefined"
   let str = toNimString(ctx, val)
@@ -325,6 +325,327 @@ proc getArrayLength*(ctx: ptr JSContext, arr: JSValueConst): uint32 =
     result = toNimInt(ctx, lengthVal).uint32
   else:
     result = 0
+
+# Auto-freeing convenience functions for common patterns
+
+proc getPropertyValue*[T](ctx: ptr JSContext, obj: JSValueConst, key: string, target: typedesc[T]): T =
+  ## Get a property value and automatically convert to Nim type with automatic memory management
+  let jsVal = getProperty(ctx, obj, key)
+  defer: JS_FreeValue(ctx, jsVal)
+  
+  when T is string:
+    result = toNimString(ctx, jsVal)
+  elif T is int32:
+    result = toNimInt(ctx, jsVal)
+  elif T is int:
+    result = toNimInt(ctx, jsVal).int
+  elif T is float64:
+    # Use type checking for robust conversion
+    if isNumber(ctx, jsVal):
+      result = toNimFloat(ctx, jsVal)
+    else:
+      result = 0.0
+  elif T is float:
+    # Use type checking for robust conversion
+    if isNumber(ctx, jsVal):
+      result = toNimFloat(ctx, jsVal).float
+    else:
+      result = 0.0
+  elif T is bool:
+    result = toNimBool(ctx, jsVal)
+  else:
+    {.error: "Unsupported type for getPropertyValue".}
+
+proc getArrayElementValue*[T](ctx: ptr JSContext, arr: JSValueConst, index: uint32, target: typedesc[T]): T =
+  ## Get an array element value and automatically convert to Nim type with automatic memory management
+  let jsVal = getArrayElement(ctx, arr, index)
+  defer: JS_FreeValue(ctx, jsVal)
+  
+  when T is string:
+    result = toNimString(ctx, jsVal)
+  elif T is int32:
+    result = toNimInt(ctx, jsVal)
+  elif T is int:
+    result = toNimInt(ctx, jsVal).int
+  elif T is float64:
+    # Use type checking for robust conversion
+    if isNumber(ctx, jsVal):
+      result = toNimFloat(ctx, jsVal)
+    else:
+      result = 0.0
+  elif T is float:
+    # Use type checking for robust conversion
+    if isNumber(ctx, jsVal):
+      result = toNimFloat(ctx, jsVal).float
+    else:
+      result = 0.0
+  elif T is bool:
+    result = toNimBool(ctx, jsVal)
+  else:
+    {.error: "Unsupported type for getArrayElementValue".}
+
+template withGlobalObject*(ctx: ptr JSContext, globalVar: untyped, body: untyped): untyped =
+  ## Automatically manage the global object lifetime in a scoped block
+  let globalVar = JS_GetGlobalObject(ctx)
+  defer: JS_FreeValue(ctx, globalVar)
+  body
+
+template withProperty*(ctx: ptr JSContext, obj: JSValueConst, key: string, propVar: untyped, body: untyped): untyped =
+  ## Automatically manage a property value lifetime in a scoped block
+  let propVar = getProperty(ctx, obj, key)
+  defer: JS_FreeValue(ctx, propVar)
+  body
+
+template withArrayElement*(ctx: ptr JSContext, arr: JSValueConst, index: uint32, elemVar: untyped, body: untyped): untyped =
+  ## Automatically manage an array element lifetime in a scoped block
+  let elemVar = getArrayElement(ctx, arr, index)
+  defer: JS_FreeValue(ctx, elemVar)
+  body
+
+# High-level convenience functions that combine common patterns
+
+proc setGlobalProperty*[T](ctx: ptr JSContext, name: string, value: T): bool =
+  ## Set a global property with automatic memory management
+  withGlobalObject(ctx, globalObj):
+    when T is string:
+      result = setProperty(ctx, globalObj, name, nimStringToJS(ctx, value))
+    elif T is int32:
+      result = setProperty(ctx, globalObj, name, nimIntToJS(ctx, value))
+    elif T is int:
+      result = setProperty(ctx, globalObj, name, nimIntToJS(ctx, value.int32))
+    elif T is float64:
+      result = setProperty(ctx, globalObj, name, nimFloatToJS(ctx, value))
+    elif T is float:
+      result = setProperty(ctx, globalObj, name, nimFloatToJS(ctx, value.float64))
+    elif T is bool:
+      result = setProperty(ctx, globalObj, name, nimBoolToJS(ctx, value))
+    else:
+      result = setProperty(ctx, globalObj, name, nimStringToJS(ctx, $value))
+
+proc getGlobalProperty*[T](ctx: ptr JSContext, name: string, target: typedesc[T]): T =
+  ## Get a global property value with automatic memory management
+  withGlobalObject(ctx, globalObj):
+    result = getPropertyValue(ctx, globalObj, name, T)
+
+# More idiomatic Nim syntax using explicit type helpers
+proc get*[T](ctx: ptr JSContext, name: string, t: typedesc[T]): T =
+  ## Get a global property value: ctx.get("userName", string)
+  getGlobalProperty(ctx, name, T)
+
+proc set*[T](ctx: ptr JSContext, name: string, value: T) =
+  ## Set a global property value: ctx.set("userName", "Alice")
+  discard setGlobalProperty(ctx, name, value)
+
+# Even more idiomatic with method call syntax
+proc `[]=`*[T](ctx: ptr JSContext, name: string, value: T) =
+  ## Set a global property value using idiomatic []= syntax: ctx["userName"] = "Alice"
+  discard setGlobalProperty(ctx, name, value)
+
+# Type-specific getters for the most common cases
+proc getString*(ctx: ptr JSContext, name: string): string =
+  ## Get a global string property: ctx.getString("userName")
+  getGlobalProperty(ctx, name, string)
+
+proc getInt*(ctx: ptr JSContext, name: string): int =
+  ## Get a global int property: ctx.getInt("userAge")
+  getGlobalProperty(ctx, name, int)
+
+proc getFloat*(ctx: ptr JSContext, name: string): float64 =
+  ## Get a global float property: ctx.getFloat("userScore")
+  getGlobalProperty(ctx, name, float64)
+
+proc getBool*(ctx: ptr JSContext, name: string): bool =
+  ## Get a global bool property: ctx.getBool("isActive")
+  getGlobalProperty(ctx, name, bool)
+
+# Create a special return type that can auto-convert to many types
+type
+  JSAutoValue* = object
+    ctx: ptr JSContext
+    name: string
+
+proc get*(ctx: ptr JSContext, name: string): JSAutoValue =
+  ## Get a property that can auto-convert to the expected type
+  ## Usage: let magicText: string = ctx.get("magic")  # auto-converts to string
+  ##        let magicNumber: int = ctx.get("number")   # auto-converts to int
+  JSAutoValue(ctx: ctx, name: name)
+
+# Converter procs for automatic type conversion
+converter toStringFromAuto*(val: JSAutoValue): string =
+  getGlobalProperty(val.ctx, val.name, string)
+
+converter toIntFromAuto*(val: JSAutoValue): int =
+  getGlobalProperty(val.ctx, val.name, int)
+
+converter toInt32FromAuto*(val: JSAutoValue): int32 =
+  getGlobalProperty(val.ctx, val.name, int32)
+
+converter toFloatFromAuto*(val: JSAutoValue): float64 =
+  getGlobalProperty(val.ctx, val.name, float64)
+
+converter toBoolFromAuto*(val: JSAutoValue): bool =
+  getGlobalProperty(val.ctx, val.name, bool)
+
+# String representation for JSAutoValue (defaults to string conversion)
+proc `$`*(val: JSAutoValue): string =
+  getGlobalProperty(val.ctx, val.name, string)
+
+# Auto-type detection and conversion
+type
+  JSValueKind* = enum
+    jvkString, jvkInt, jvkFloat, jvkBool, jvkNull, jvkUndefined, jvkObject, jvkArray
+    
+  JSAutoDetectedValue* = object
+    case kind*: JSValueKind
+    of jvkString: strVal*: string
+    of jvkInt: intVal*: int
+    of jvkFloat: floatVal*: float64
+    of jvkBool: boolVal*: bool
+    of jvkNull: discard
+    of jvkUndefined: discard
+    of jvkObject: objRepr*: string  # JSON representation
+    of jvkArray: arrRepr*: string   # JSON representation
+
+# More accurate type checking using emit (for autoDetect only)
+proc isUndefinedAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsUndefined(`val`);".}
+  checkResult != 0
+
+proc isNullAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsNull(`val`);".}
+  checkResult != 0
+
+proc isBoolAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsBool(`val`);".}
+  checkResult != 0
+
+proc isNumberAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsNumber(`val`);".}
+  checkResult != 0
+
+proc isStringAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsString(`val`);".}
+  checkResult != 0
+
+proc isObjectAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsObject(`val`);".}
+  checkResult != 0
+
+proc isArrayAccurate(ctx: ptr JSContext, val: JSValueConst): bool =
+  var checkResult: cint
+  {.emit: "`checkResult` = JS_IsArray(`ctx`, `val`);".}
+  checkResult != 0
+
+proc autoDetect*(ctx: ptr JSContext, name: string): JSAutoDetectedValue =
+  ## Automatically detect the JavaScript type and return appropriate Nim value
+  withGlobalObject(ctx, globalObj):
+    let jsVal = getProperty(ctx, globalObj, name)
+    defer: JS_FreeValue(ctx, jsVal)
+    
+    if isUndefinedAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkUndefined)
+    elif isNullAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkNull)
+    elif isBoolAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkBool, boolVal: toNimBool(ctx, jsVal))
+    elif isNumberAccurate(ctx, jsVal):
+      let floatVal = toNimFloat(ctx, jsVal)
+      # Check if it's an integer
+      if floatVal == floatVal.int.float64:
+        result = JSAutoDetectedValue(kind: jvkInt, intVal: floatVal.int)
+      else:
+        result = JSAutoDetectedValue(kind: jvkFloat, floatVal: floatVal)
+    elif isArrayAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkArray, arrRepr: toNimString(ctx, jsVal))
+    elif isObjectAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkObject, objRepr: toNimString(ctx, jsVal))
+    elif isStringAccurate(ctx, jsVal):
+      result = JSAutoDetectedValue(kind: jvkString, strVal: toNimString(ctx, jsVal))
+    else:
+      # Fallback to string
+      result = JSAutoDetectedValue(kind: jvkString, strVal: toNimString(ctx, jsVal))
+
+# String representation for auto-detected values
+proc `$`*(val: JSAutoDetectedValue): string =
+  case val.kind
+  of jvkString: val.strVal
+  of jvkInt: $val.intVal
+  of jvkFloat: $val.floatVal
+  of jvkBool: $val.boolVal
+  of jvkNull: "null"
+  of jvkUndefined: "undefined"
+  of jvkObject: val.objRepr
+  of jvkArray: val.arrRepr
+
+# Convenience function for auto-detection
+proc detectType*(ctx: ptr JSContext, name: string): JSAutoDetectedValue =
+  ## Detect the actual JavaScript type and return the appropriate Nim value
+  ## Usage: let value = ctx.detectType("someProperty")
+  ##        echo "Type: ", value.kind, ", Value: ", value
+  autoDetect(ctx, name)
+
+# Scoped template for idiomatic property access within a context
+template withIdiomatic*(ctx: ptr JSContext, body: untyped): untyped =
+  ## Enable idiomatic syntax for JS objects and arrays within a scope
+  template `[]`[T](obj: JSValueConst, name: string): T =
+    getPropertyValue(ctx, obj, name, T)
+  
+  template `[]=`[T](obj: JSValueConst, name: string, value: T) =
+    when T is string:
+      discard setProperty(ctx, obj, name, nimStringToJS(ctx, value))
+    elif T is int32:
+      discard setProperty(ctx, obj, name, nimIntToJS(ctx, value))
+    elif T is int:
+      discard setProperty(ctx, obj, name, nimIntToJS(ctx, value.int32))
+    elif T is float64:
+      discard setProperty(ctx, obj, name, nimFloatToJS(ctx, value))
+    elif T is float:
+      discard setProperty(ctx, obj, name, nimFloatToJS(ctx, value.float64))
+    elif T is bool:
+      discard setProperty(ctx, obj, name, nimBoolToJS(ctx, value))
+    else:
+      discard setProperty(ctx, obj, name, nimStringToJS(ctx, $value))
+  
+  template `[]`[T](arr: JSValueConst, index: uint32): T =
+    getArrayElementValue(ctx, arr, index, T)
+  
+  template `[]=`[T](arr: JSValueConst, index: uint32, value: T) =
+    when T is string:
+      discard setArrayElement(ctx, arr, index, nimStringToJS(ctx, value))
+    elif T is int32:
+      discard setArrayElement(ctx, arr, index, nimIntToJS(ctx, value))
+    elif T is int:
+      discard setArrayElement(ctx, arr, index, nimIntToJS(ctx, value.int32))
+    elif T is float64:
+      discard setArrayElement(ctx, arr, index, nimFloatToJS(ctx, value))
+    elif T is float:
+      discard setArrayElement(ctx, arr, index, nimFloatToJS(ctx, value.float64))
+    elif T is bool:
+      discard setArrayElement(ctx, arr, index, nimBoolToJS(ctx, value))
+    else:
+      discard setArrayElement(ctx, arr, index, nimStringToJS(ctx, $value))
+  
+  body
+
+proc iterateArray*(ctx: ptr JSContext, arr: JSValueConst, callback: proc(ctx: ptr JSContext, index: uint32, element: JSValueConst)) =
+  ## Iterate over array elements with automatic memory management for each element
+  let length = getArrayLength(ctx, arr)
+  for i in 0..<length:
+    withArrayElement(ctx, arr, i, element):
+      callback(ctx, i, element)
+
+proc collectArray*[T](ctx: ptr JSContext, arr: JSValueConst, target: typedesc[T]): seq[T] =
+  ## Collect array elements into a Nim sequence with automatic memory management
+  let length = getArrayLength(ctx, arr)
+  result = newSeq[T](length)
+  for i in 0..<length:
+    result[i] = getArrayElementValue(ctx, arr, i, T)
 
 # Advanced type marshaling functions
 
@@ -407,22 +728,32 @@ proc nimFunctionTrampoline(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint
       # No arguments
       return funcEntry.func0(ctx)
     of nimFunc1:
-      # One argument
+      # One argument - automatically free the duplicated argument
       if argc >= 1:
-        let arg = cast[ptr UncheckedArray[JSValueConst]](argv)[0]
-        return funcEntry.func1(ctx, JS_DupValue(ctx, arg))
+        let arg = JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[0])
+        defer: JS_FreeValue(ctx, arg)
+        return funcEntry.func1(ctx, arg)
       else:
-        return funcEntry.func1(ctx, jsUndefined(ctx))
+        let arg = jsUndefined(ctx)
+        defer: JS_FreeValue(ctx, arg)
+        return funcEntry.func1(ctx, arg)
     of nimFunc2:
-      # Two arguments
+      # Two arguments - automatically free the duplicated arguments
       let arg1 = if argc >= 1: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[0]) else: jsUndefined(ctx)
       let arg2 = if argc >= 2: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[1]) else: jsUndefined(ctx)
+      defer:
+        JS_FreeValue(ctx, arg1)
+        JS_FreeValue(ctx, arg2)
       return funcEntry.func2(ctx, arg1, arg2)
     of nimFunc3:
-      # Three arguments
+      # Three arguments - automatically free the duplicated arguments
       let arg1 = if argc >= 1: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[0]) else: jsUndefined(ctx)
       let arg2 = if argc >= 2: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[1]) else: jsUndefined(ctx)
       let arg3 = if argc >= 3: JS_DupValue(ctx, cast[ptr UncheckedArray[JSValueConst]](argv)[2]) else: jsUndefined(ctx)
+      defer:
+        JS_FreeValue(ctx, arg1)
+        JS_FreeValue(ctx, arg2)
+        JS_FreeValue(ctx, arg3)
       return funcEntry.func3(ctx, arg1, arg2, arg3)
     of nimFuncVar:
       # Variadic
@@ -528,8 +859,8 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction0) =
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction1) =
   ## Register a Nim function with one argument to be callable from JavaScript
   ## 
-  ## IMPORTANT: The JSValue argument passed to your function is duplicated and must be
-  ## freed with JS_FreeValue(ctx, arg) unless ownership is transferred elsewhere.
+  ## AUTOMATIC MEMORY MANAGEMENT: The JSValue argument is automatically freed
+  ## by the trampoline - you don't need to call JS_FreeValue manually!
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -545,8 +876,8 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction1) =
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction2) =
   ## Register a Nim function with two arguments to be callable from JavaScript
   ## 
-  ## IMPORTANT: The JSValue arguments passed to your function are duplicated and must be
-  ## freed with JS_FreeValue(ctx, argN) unless ownership is transferred elsewhere.
+  ## AUTOMATIC MEMORY MANAGEMENT: The JSValue arguments are automatically freed
+  ## by the trampoline - you don't need to call JS_FreeValue manually!
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -562,8 +893,8 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction2) =
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction3) =
   ## Register a Nim function with three arguments to be callable from JavaScript
   ## 
-  ## IMPORTANT: The JSValue arguments passed to your function are duplicated and must be
-  ## freed with JS_FreeValue(ctx, argN) unless ownership is transferred elsewhere.
+  ## AUTOMATIC MEMORY MANAGEMENT: The JSValue arguments are automatically freed
+  ## by the trampoline - you don't need to call JS_FreeValue manually!
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
@@ -579,10 +910,8 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction3) =
 proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunctionVariadic) =
   ## Register a Nim function with variadic arguments to be callable from JavaScript
   ## 
-  ## IMPORTANT: The JSValue arguments in the args sequence are duplicated and must be
-  ## freed with JS_FreeValue(ctx, arg) for each arg unless ownership is transferred elsewhere.
-  ## Note: The variadic case is handled automatically by the trampoline - you don't need
-  ## to free the args sequence elements manually.
+  ## AUTOMATIC MEMORY MANAGEMENT: The JSValue arguments in the args sequence are
+  ## automatically freed by the trampoline - you don't need to call JS_FreeValue manually!
   let functionId = js.nextFunctionId
   js.nextFunctionId += 1
   
