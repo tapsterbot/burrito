@@ -1,10 +1,12 @@
 # Nim build artifacts
 nimcache/
 *.exe
-examples/basic_example
-examples/advanced_example
-examples/call_nim_from_js
+examples/advanced_functions
 examples/advanced_native_bridging
+examples/basic_example
+examples/call_nim_from_js
+examples/object_manipulation
+examples/type_marshaling
 src/burrito
 
 # QuickJS source and builds

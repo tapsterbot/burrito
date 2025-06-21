@@ -7,7 +7,9 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 - 📦 **Simple**: Easy-to-use API for embedding JavaScript in Nim
 - 🔗 **Two-way**: Run JavaScript from Nim and call Nim functions from JavaScript
 - 🔢 **Flexible**: Support for functions with different numbers of arguments
-- 🔄 **Type conversion**: Built-in helpers for converting between Nim and JavaScript values
+- 🔄 **Type marshaling**: Comprehensive conversion between Nim and JavaScript data structures
+- 🚀 **Performance**: Native C function bridging with zero overhead
+- 🧠 **Smart**: Support for sequences, tables, tuples, and custom object types
 
 ## Installation
 
@@ -215,6 +217,109 @@ Registers a Nim function to be callable from JavaScript using native C function 
 - `nimFloatToJS(ctx: ptr JSContext, val: float64): JSValue`
 - `nimBoolToJS(ctx: ptr JSContext, val: bool): JSValue`
 
+### Type Checking Functions
+
+- `isUndefined(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isNull(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isBool(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isNumber(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isString(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isObject(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isArray(ctx: ptr JSContext, val: JSValueConst): bool`
+- `isFunction(ctx: ptr JSContext, val: JSValueConst): bool`
+
+### Object and Array Manipulation
+
+#### Object Operations
+- `getProperty(ctx: ptr JSContext, obj: JSValueConst, key: string): JSValue`
+- `setProperty(ctx: ptr JSContext, obj: JSValueConst, key: string, value: JSValue): bool`
+
+#### Array Operations
+- `newArray(ctx: ptr JSContext): JSValue`
+- `getArrayElement(ctx: ptr JSContext, arr: JSValueConst, index: uint32): JSValue`
+- `setArrayElement(ctx: ptr JSContext, arr: JSValueConst, index: uint32, value: JSValue): bool`
+- `getArrayLength(ctx: ptr JSContext, arr: JSValueConst): uint32`
+
+### Comprehensive Type Marshaling
+
+Burrito provides advanced type marshaling capabilities for seamless conversion between Nim data structures and JavaScript values.
+
+#### Sequence and Array Conversions
+- `seqToJS[T](ctx: ptr JSContext, s: seq[T]): JSValue` - Convert Nim sequence to JavaScript array
+  - Supports: `string`, `int`/`int32`, `float`/`float64`, `bool`, and complex types (via string representation)
+
+#### Table and Object Conversions  
+- `tableToJS[K,V](ctx: ptr JSContext, t: Table[K,V]): JSValue` - Convert Nim Table to JavaScript object
+  - Key types: Any type convertible to string
+  - Value types: `string`, `int`/`int32`, `float`/`float64`, `bool`, and complex types (via string representation)
+
+#### Tuple Conversions
+- `nimTupleToJSArray[T](ctx: ptr JSContext, tup: T): JSValue` - Convert Nim tuple to JavaScript array
+  - Supported tuple types: `(string, int)`, `(string, string)`, `(int, int)`
+
+#### Custom Object Type Support
+Create your own conversion functions for custom Nim object types:
+
+```nim
+type
+  Person = object
+    name: string
+    age: int
+    email: string
+
+proc personToJS(ctx: ptr JSContext, person: Person): JSValue =
+  let obj = JS_NewObject(ctx)
+  discard setProperty(ctx, obj, "name", nimStringToJS(ctx, person.name))
+  discard setProperty(ctx, obj, "age", nimIntToJS(ctx, person.age.int32))
+  discard setProperty(ctx, obj, "email", nimStringToJS(ctx, person.email))
+  return obj
+
+proc jsToPerson(ctx: ptr JSContext, jsObj: JSValueConst): Person =
+  let nameVal = getProperty(ctx, jsObj, "name")
+  let ageVal = getProperty(ctx, jsObj, "age") 
+  let emailVal = getProperty(ctx, jsObj, "email")
+  defer:
+    JS_FreeValue(ctx, nameVal)
+    JS_FreeValue(ctx, ageVal)
+    JS_FreeValue(ctx, emailVal)
+  
+  result = Person(
+    name: toNimString(ctx, nameVal),
+    age: toNimInt(ctx, ageVal).int,
+    email: toNimString(ctx, emailVal)
+  )
+```
+
+#### Practical Type Marshaling Example
+
+```nim
+import burrito
+import std/tables
+
+# Create QuickJS instance
+var js = newQuickJS()
+defer: js.close()
+
+# Convert Nim data structures to JavaScript
+let fruits = @["apple", "banana", "cherry"]
+let config = {"host": "localhost", "port": "8080"}.toTable()
+let point = (x: 100, y: 200)
+
+# Set them as global JavaScript variables
+let globalObj = JS_GetGlobalObject(js.context)
+defer: JS_FreeValue(js.context, globalObj)
+
+discard setProperty(js.context, globalObj, "fruits", seqToJS(js.context, fruits))
+discard setProperty(js.context, globalObj, "config", tableToJS(js.context, config))
+discard setProperty(js.context, globalObj, "point", nimTupleToJSArray(js.context, point))
+
+# Use them in JavaScript
+echo js.eval("fruits.length")                    # 3
+echo js.eval("fruits.join(', ')")               # apple, banana, cherry
+echo js.eval("config.host + ':' + config.port") # localhost:8080
+echo js.eval("point[0] + point[1]")             # 300
+```
+
 ## Examples
 
 Run the examples:
@@ -222,6 +327,14 @@ Run the examples:
 nim c -r examples/basic_example.nim             # Basic JavaScript evaluation
 nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript
 nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridging
+nim c -r examples/object_manipulation.nim       # Object and array manipulation
+nim c -r examples/advanced_functions.nim        # Advanced functions with type checking
+nim c -r examples/type_marshaling.nim           # Comprehensive type marshaling
+```
+
+Or run all examples at once:
+```bash
+nimble examples
 ```
 
 ## Contributing

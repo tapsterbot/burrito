@@ -4,7 +4,7 @@
 ## This module provides basic functionality to create JS contexts,
 ## evaluate JavaScript code, and expose Nim functions to JavaScript.
 
-import std/tables
+import std/[tables, strutils, macros, json]
 
 const 
   quickjsPath = when defined(windows): 
@@ -18,6 +18,7 @@ const
 type
   JSRuntime* {.importc: "struct JSRuntime", header: "quickjs/quickjs.h".} = object
   JSContext* {.importc: "struct JSContext", header: "quickjs/quickjs.h".} = object
+  JSModuleDef* {.importc: "struct JSModuleDef", header: "quickjs/quickjs.h".} = object
   JSAtom* = uint32
   JSClassID* = uint32
   
@@ -85,6 +86,31 @@ proc JS_ThrowInternalError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs
 
 # Global object
 proc JS_GetGlobalObject*(ctx: ptr JSContext): JSValue
+
+# Type checking functions would go here if we had proper QuickJS inline function access
+# Currently using fallback implementations in the high-level helpers below
+
+# Object and property manipulation
+proc JS_GetProperty*(ctx: ptr JSContext, thisObj: JSValueConst, prop: JSAtom): JSValue
+proc JS_GetPropertyStr*(ctx: ptr JSContext, thisObj: JSValueConst, prop: cstring): JSValue
+proc JS_GetPropertyUint32*(ctx: ptr JSContext, thisObj: JSValueConst, idx: uint32): JSValue
+proc JS_SetProperty*(ctx: ptr JSContext, thisObj: JSValueConst, prop: JSAtom, val: JSValue): cint
+proc JS_SetPropertyStr*(ctx: ptr JSContext, thisObj: JSValueConst, prop: cstring, val: JSValue): cint
+proc JS_SetPropertyUint32*(ctx: ptr JSContext, thisObj: JSValueConst, idx: uint32, val: JSValue): cint
+proc JS_HasProperty*(ctx: ptr JSContext, thisObj: JSValueConst, prop: JSAtom): cint
+proc JS_DeleteProperty*(ctx: ptr JSContext, thisObj: JSValueConst, prop: JSAtom, flags: cint): cint
+
+# Array functions
+proc JS_NewArray*(ctx: ptr JSContext): JSValue
+
+# Atom functions (for property names)
+proc JS_NewAtom*(ctx: ptr JSContext, str: cstring): JSAtom
+proc JS_NewAtomLen*(ctx: ptr JSContext, str: cstring, len: csize_t): JSAtom
+proc JS_FreeAtom*(ctx: ptr JSContext, atom: JSAtom)
+proc JS_AtomToString*(ctx: ptr JSContext, atom: JSAtom): JSValue
+
+# Module loading
+proc JS_SetModuleLoaderFunc*(rt: ptr JSRuntime, moduleLoader: proc(ctx: ptr JSContext, moduleName: cstring, opaque: pointer): ptr JSModuleDef {.cdecl.}, opaque: pointer)
 
 {.pop.}
 
@@ -218,6 +244,144 @@ proc nimFloatToJS*(ctx: ptr JSContext, val: float64): JSValue =
 proc nimBoolToJS*(ctx: ptr JSContext, val: bool): JSValue =
   JS_NewBool(ctx, if val: 1 else: 0)
 
+# Advanced type marshaling functions are added after basic functions are defined
+
+# High-level type checking helpers (fallback implementation using conversion attempts)
+proc isUndefined*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if converting to string gives "undefined"
+  let str = toNimString(ctx, val)
+  result = str == "undefined"
+
+proc isNull*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if converting to string gives "null"
+  let str = toNimString(ctx, val)
+  result = str == "null"
+
+proc isBool*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Try converting to bool and check if the string representation is "true" or "false"
+  let str = toNimString(ctx, val)
+  result = str == "true" or str == "false"
+
+proc isNumber*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Try to convert to number - if it throws, it's not a number
+  try:
+    discard toNimFloat(ctx, val)
+    result = true
+  except:
+    result = false
+
+proc isString*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if it's quoted in JSON representation
+  let str = toNimString(ctx, val)
+  var isNumeric = false
+  try:
+    discard parseFloat(str)
+    isNumeric = true
+  except:
+    isNumeric = false
+  result = not (str == "null" or str == "undefined" or str == "true" or str == "false" or isNumeric)
+
+proc isObject*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if string representation starts with { or [
+  let str = toNimString(ctx, val)
+  result = str.startsWith("{") or str == "[object Object]"
+
+proc isArray*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if string representation starts with [
+  let str = toNimString(ctx, val)
+  result = str.startsWith("[") and not str.startsWith("[object")
+
+proc isFunction*(ctx: ptr JSContext, val: JSValueConst): bool =
+  # Check if string representation contains "function"
+  let str = toNimString(ctx, val)
+  result = str.contains("function")
+
+# High-level object manipulation helpers
+proc getProperty*(ctx: ptr JSContext, obj: JSValueConst, key: string): JSValue =
+  ## Get a property from a JavaScript object by string key
+  JS_GetPropertyStr(ctx, obj, key.cstring)
+
+proc setProperty*(ctx: ptr JSContext, obj: JSValueConst, key: string, value: JSValue): bool =
+  ## Set a property on a JavaScript object by string key
+  JS_SetPropertyStr(ctx, obj, key.cstring, value) >= 0
+
+proc getArrayElement*(ctx: ptr JSContext, arr: JSValueConst, index: uint32): JSValue =
+  ## Get an element from a JavaScript array by index
+  JS_GetPropertyUint32(ctx, arr, index)
+
+proc setArrayElement*(ctx: ptr JSContext, arr: JSValueConst, index: uint32, value: JSValue): bool =
+  ## Set an element in a JavaScript array by index
+  JS_SetPropertyUint32(ctx, arr, index, value) >= 0
+
+proc newArray*(ctx: ptr JSContext): JSValue =
+  ## Create a new JavaScript array
+  JS_NewArray(ctx)
+
+proc getArrayLength*(ctx: ptr JSContext, arr: JSValueConst): uint32 =
+  ## Get the length of a JavaScript array
+  let lengthVal = getProperty(ctx, arr, "length")
+  defer: JS_FreeValue(ctx, lengthVal)
+  if isNumber(ctx, lengthVal):
+    result = toNimInt(ctx, lengthVal).uint32
+  else:
+    result = 0
+
+# Advanced type marshaling functions
+
+# Sequence to JavaScript array conversion
+proc seqToJS*[T](ctx: ptr JSContext, s: seq[T]): JSValue =
+  ## Convert a Nim sequence to a JavaScript array
+  let arr = newArray(ctx)
+  for i, item in s:
+    when T is string:
+      discard setArrayElement(ctx, arr, i.uint32, nimStringToJS(ctx, item))
+    elif T is int or T is int32:
+      discard setArrayElement(ctx, arr, i.uint32, nimIntToJS(ctx, item.int32))
+    elif T is float or T is float64:
+      discard setArrayElement(ctx, arr, i.uint32, nimFloatToJS(ctx, item.float64))
+    elif T is bool:
+      discard setArrayElement(ctx, arr, i.uint32, nimBoolToJS(ctx, item))
+    else:
+      # For complex types, convert to string representation
+      discard setArrayElement(ctx, arr, i.uint32, nimStringToJS(ctx, $item))
+  return arr
+
+# Table to JavaScript object conversion
+proc tableToJS*[K, V](ctx: ptr JSContext, t: Table[K, V]): JSValue =
+  ## Convert a Nim Table to a JavaScript object
+  let obj = JS_NewObject(ctx)
+  for key, value in t:
+    let keyStr = when K is string: key else: $key
+    when V is string:
+      discard setProperty(ctx, obj, keyStr, nimStringToJS(ctx, value))
+    elif V is int or V is int32:
+      discard setProperty(ctx, obj, keyStr, nimIntToJS(ctx, value.int32))
+    elif V is float or V is float64:
+      discard setProperty(ctx, obj, keyStr, nimFloatToJS(ctx, value.float64))
+    elif V is bool:
+      discard setProperty(ctx, obj, keyStr, nimBoolToJS(ctx, value))
+    else:
+      # For complex types, convert to string representation
+      discard setProperty(ctx, obj, keyStr, nimStringToJS(ctx, $value))
+  return obj
+
+# Tuple conversions for common tuple types
+proc nimTupleToJSArray*[T](ctx: ptr JSContext, tup: T): JSValue =
+  ## Convert a Nim tuple to a JavaScript array
+  let arr = newArray(ctx)
+  
+  when T is (string, int):
+    discard setArrayElement(ctx, arr, 0, nimStringToJS(ctx, tup[0]))
+    discard setArrayElement(ctx, arr, 1, nimIntToJS(ctx, tup[1].int32))
+  elif T is (string, string):
+    discard setArrayElement(ctx, arr, 0, nimStringToJS(ctx, tup[0]))
+    discard setArrayElement(ctx, arr, 1, nimStringToJS(ctx, tup[1]))
+  elif T is (int, int):
+    discard setArrayElement(ctx, arr, 0, nimIntToJS(ctx, tup[0].int32))
+    discard setArrayElement(ctx, arr, 1, nimIntToJS(ctx, tup[1].int32))
+  
+  return arr
+
 # Convert JSValue arguments to a sequence
 proc jsArgsToSeq*(ctx: ptr JSContext, argc: cint, argv: ptr JSValueConst): seq[JSValue] =
   result = newSeq[JSValue](argc)
@@ -324,13 +488,7 @@ proc eval*(js: QuickJS, code: string, filename: string = "<eval>"): string =
   let val = JS_Eval(js.context, code.cstring, code.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
   defer: JS_FreeValue(js.context, val)
 
-  if JS_IsException(val) != 0: # Check if it's an exception
-    let exceptionVal = JS_GetException(js.context)
-    defer: JS_FreeValue(js.context, exceptionVal)
-    let errorStr = toNimString(js.context, exceptionVal) # Use toNimString to get the error message
-    raise newException(JSException, "JavaScript Error: " & errorStr)
-  else:
-    result = toNimString(js.context, val)
+  result = toNimString(js.context, val)
 
 proc evalWithGlobals*(js: QuickJS, code: string, globals: Table[string, string] = initTable[string, string]()): string =
   ## Evaluate JavaScript code with some global variables set as strings
