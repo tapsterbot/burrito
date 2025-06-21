@@ -30,7 +30,7 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 2. **Download and build QuickJS:**
    ```bash
    nimble get_quickjs
-   nimble build_lib
+   nimble build_quickjs
    ```
 
 3. **Install the package:**

@@ -74,6 +74,10 @@ proc JS_Eval*(ctx: ptr JSContext, input: cstring, inputLen: csize_t, filename: c
 proc JS_FreeValue*(ctx: ptr JSContext, v: JSValue)
 proc JS_DupValue*(ctx: ptr JSContext, v: JSValueConst): JSValue
 
+# Exception handling
+proc JS_IsException*(v: JSValueConst): cint
+proc JS_GetException*(ctx: ptr JSContext): JSValue
+
 # Global object
 proc JS_GetGlobalObject*(ctx: ptr JSContext): JSValue
 
@@ -159,10 +163,17 @@ proc toNimString*(ctx: ptr JSContext, val: JSValueConst): string =
     result = ""
 
 proc toNimInt*(ctx: ptr JSContext, val: JSValueConst): int32 =
-  discard JS_ToInt32(ctx, addr result, val)
+  var res: int32
+  if JS_ToInt32(ctx, addr res, val) != 0: # Check for error
+    # Consider getting more specific error info if possible, or a generic conversion error
+    raise newException(JSException, "Failed to convert JSValue to int32")
+  result = res
 
 proc toNimFloat*(ctx: ptr JSContext, val: JSValueConst): float64 =
-  discard JS_ToFloat64(ctx, addr result, val)
+  var res: float64
+  if JS_ToFloat64(ctx, addr res, val) != 0: # Check for error
+    raise newException(JSException, "Failed to convert JSValue to float64")
+  result = res
 
 proc toNimBool*(ctx: ptr JSContext, val: JSValueConst): bool =
   JS_ToBool(ctx, val) != 0
@@ -225,7 +236,10 @@ proc nimFunctionTrampoline(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint
     of nimFuncVar:
       # Variadic
       let args = jsArgsToSeq(ctx, argc, argv)
-      return funcEntry.funcVar(ctx, args)
+      result = funcEntry.funcVar(ctx, args)
+      # CRITICAL: Free the duplicated JSValue arguments
+      for arg in args:
+        JS_FreeValue(ctx, arg)
   except:
     # Return undefined on any exception
     return jsUndefined(ctx)
@@ -268,8 +282,14 @@ proc eval*(js: QuickJS, code: string, filename: string = "<eval>"): string =
   ## Evaluate JavaScript code and return result as string
   let val = JS_Eval(js.context, code.cstring, code.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
   defer: JS_FreeValue(js.context, val)
-  
-  result = toNimString(js.context, val)
+
+  if JS_IsException(val) != 0: # Check if it's an exception
+    let exceptionVal = JS_GetException(js.context)
+    defer: JS_FreeValue(js.context, exceptionVal)
+    let errorStr = toNimString(js.context, exceptionVal) # Use toNimString to get the error message
+    raise newException(JSException, "JavaScript Error: " & errorStr)
+  else:
+    result = toNimString(js.context, val)
 
 proc evalWithGlobals*(js: QuickJS, code: string, globals: Table[string, string] = initTable[string, string]()): string =
   ## Evaluate JavaScript code with some global variables set as strings

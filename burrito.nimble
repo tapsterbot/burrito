@@ -33,7 +33,7 @@ task get_quickjs, "Download and extract latest QuickJS source":
   exec "mv quickjs-2025-04-26 quickjs"
   echo "✅ QuickJS source downloaded and extracted to quickjs/"
 
-task build_lib, "Build the QuickJS library":
+task build_quickjs, "Build the QuickJS library":
   if not dirExists("quickjs"):
     echo "❌ QuickJS source not found. Run 'nimble get_quickjs' first."
     quit(1)
@@ -49,10 +49,14 @@ task delete_quickjs, "Remove QuickJS source directory":
   else:
     echo "ℹ️  No QuickJS directory found"
 
-task clean, "Clean build artifacts":
+task clean_all, "Clean build artifacts":
+  echo "🧹 Cleaning build artifacts..."
   if dirExists("quickjs"):
+    echo "🧹 Cleaning QuickJS build artifacts..."
     exec "cd quickjs && make clean"
+  echo "🧹 Removing compiled Nim binaries..."
   exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging"
+  echo "✅ Clean completed"
 
 task test, "Run tests and examples":
   exec "nimble examples"

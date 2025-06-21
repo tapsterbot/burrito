@@ -1,5 +1,5 @@
 import ../src/burrito
-import std/[times, math]
+import std/times
 
 # Example functions demonstrating different argument patterns
 
