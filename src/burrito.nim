@@ -4,7 +4,7 @@
 ## This module provides basic functionality to create JS contexts,
 ## evaluate JavaScript code, and expose Nim functions to JavaScript.
 
-import std/tables
+import std/[tables, strutils]
 
 const 
   quickjsPath = when defined(windows): 
@@ -167,55 +167,19 @@ proc eval*(js: QuickJS, code: string, filename: string = "<eval>"): string =
   ## Evaluate JavaScript code and return result as string
   ## This handles special bridge calls to execute Nim functions
   
-  # Check if this is a bridge processing call
-  if code == "__processPendingNimCall()":
-    # Check if there's a pending function call in JavaScript globals
-    let pendingCallCode = "globalThis.__nimPendingCall || ''"
-    let pendingCallVal = JS_Eval(js.context, pendingCallCode.cstring, pendingCallCode.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
-    defer: JS_FreeValue(js.context, pendingCallVal)
-    
-    let functionName = toNimString(js.context, pendingCallVal)
-    
-    if functionName != "" and functionName in globalFunctionRegistry:
-      # Execute the Nim function
-      let nimFunc = globalFunctionRegistry[functionName]
-      let nimResult = nimFunc()
-      
-      # Clear the pending call in JavaScript
-      discard JS_Eval(js.context, "globalThis.__nimPendingCall = ''".cstring, 31, filename.cstring, JS_EVAL_TYPE_GLOBAL)
-      
-      return nimResult
-    else:
-      return "Function not found: " & functionName
-  
   # Normal JavaScript evaluation
   let val = JS_Eval(js.context, code.cstring, code.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
   defer: JS_FreeValue(js.context, val)
   
   let jsResult = toNimString(js.context, val)
   
-  # Check if the result is the special marker that indicates we need to execute a Nim function
-  if jsResult == "__NIM_EXECUTE_PENDING__":
-    # There's a pending Nim function call to execute
-    let pendingCallCode = "globalThis.__nimPendingCall || ''"
-    let pendingCallVal = JS_Eval(js.context, pendingCallCode.cstring, pendingCallCode.len.csize_t, filename.cstring, JS_EVAL_TYPE_GLOBAL)
-    defer: JS_FreeValue(js.context, pendingCallVal)
-    
-    let functionName = toNimString(js.context, pendingCallVal)
-    
-    if functionName != "" and functionName in globalFunctionRegistry:
-      # Execute the Nim function
-      let nimFunc = globalFunctionRegistry[functionName]
-      let nimResult = nimFunc()
-      
-      # Clear the pending call in JavaScript
-      discard JS_Eval(js.context, "globalThis.__nimPendingCall = ''".cstring, 31, filename.cstring, JS_EVAL_TYPE_GLOBAL)
-      
-      return nimResult
-    else:
-      return "Function not found: " & functionName
-  
+  # Check if the result contains Nim function call placeholders and replace them
   result = jsResult
+  for functionName, nimFunc in globalFunctionRegistry:
+    let placeholder = "__NIM_CALL_" & functionName & "__"
+    if placeholder in result:
+      let nimResult = nimFunc()
+      result = result.replace(placeholder, nimResult)
 
 # Simplified function registration without complex bridging
 # For the initial version, we'll demonstrate the concept
@@ -251,17 +215,37 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunction) =
   let code = name & " = function() { return __nimBridge('" & name & "'); }"
   discard js.eval(code)
 
+# Execute a pending Nim function call
+proc executePendingCall(js: QuickJS): string =
+  let pendingCallCode = "globalThis.__nimPendingCall || ''"
+  let pendingCallVal = JS_Eval(js.context, pendingCallCode.cstring, pendingCallCode.len.csize_t, "<eval>".cstring, JS_EVAL_TYPE_GLOBAL)
+  defer: JS_FreeValue(js.context, pendingCallVal)
+  
+  let functionName = toNimString(js.context, pendingCallVal)
+  
+  if functionName != "" and functionName in globalFunctionRegistry:
+    # Execute the Nim function
+    let nimFunc = globalFunctionRegistry[functionName]
+    let nimResult = nimFunc()
+    
+    # Clear the pending call in JavaScript
+    discard JS_Eval(js.context, "globalThis.__nimPendingCall = ''".cstring, 31, "<eval>".cstring, JS_EVAL_TYPE_GLOBAL)
+    
+    return nimResult
+  else:
+    return "Function not found: " & functionName
+
 # Helper function to establish the bridge between JS and Nim
 proc setupNimBridge*(js: var QuickJS) =
   ## Set up the JavaScript bridge function that can call registered Nim functions
   let bridgeCode = """
     __nimBridge = function(functionName) {
-      // Set global variables that Nim can read and write
+      // For now, we'll use a synchronous approach with a global result cache
       globalThis.__nimPendingCall = functionName;
-      globalThis.__nimCallResult = '';
+      globalThis.__nimResult = '';
       
-      // Return a special marker that will trigger Nim processing
-      return '__NIM_EXECUTE_PENDING__';
+      // Return a placeholder that will be replaced
+      return '__NIM_CALL_' + functionName + '__';
     };
   """
   discard js.eval(bridgeCode)
