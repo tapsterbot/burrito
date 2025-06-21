@@ -77,6 +77,11 @@ proc JS_DupValue*(ctx: ptr JSContext, v: JSValueConst): JSValue
 # Exception handling
 proc JS_IsException*(v: JSValueConst): cint
 proc JS_GetException*(ctx: ptr JSContext): JSValue
+proc JS_Throw*(ctx: ptr JSContext, obj: JSValueConst): JSValue
+proc JS_ThrowTypeError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs.}
+proc JS_ThrowReferenceError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs.}
+proc JS_ThrowRangeError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs.}
+proc JS_ThrowInternalError*(ctx: ptr JSContext, fmt: cstring): JSValue {.varargs.}
 
 # Global object
 proc JS_GetGlobalObject*(ctx: ptr JSContext): JSValue
@@ -262,9 +267,20 @@ proc nimFunctionTrampoline(ctx: ptr JSContext, thisVal: JSValueConst, argc: cint
       # CRITICAL: Free the duplicated JSValue arguments
       for arg in args:
         JS_FreeValue(ctx, arg)
-  except:
-    # Return undefined on any exception
-    return jsUndefined(ctx)
+  except JSException as e:
+    # Convert JSException to JavaScript exception
+    let errorObj = nimStringToJS(ctx, e.msg)
+    return JS_Throw(ctx, errorObj)
+  except ValueError as e:
+    # Convert ValueError to JavaScript TypeError
+    return JS_ThrowTypeError(ctx, e.msg.cstring)
+  except RangeDefect as e:
+    # Convert RangeDefect to JavaScript RangeError
+    return JS_ThrowRangeError(ctx, e.msg.cstring)
+  except Exception as e:
+    # Convert other exceptions to JavaScript Error
+    let errorObj = nimStringToJS(ctx, "Nim Error: " & e.msg)
+    return JS_Throw(ctx, errorObj)
 
 # Core QuickJS wrapper
 proc newQuickJS*(): QuickJS =
