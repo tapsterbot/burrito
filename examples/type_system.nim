@@ -50,7 +50,7 @@ proc companyToJS(ctx: ptr JSContext, company: Company): JSValue =
   return obj
 
 proc main() =
-  echo "🔬 Burrito Type System Showcase"
+  echo "🔬 Burrito Type System Demo"
   echo "==============================="
   
   var js = newQuickJS()
@@ -98,7 +98,7 @@ proc main() =
   echo "  numbers  → array        = ", js.eval("JSON.stringify(samples.numbers)")
   echo "  simple   → object       = ", js.eval("JSON.stringify(samples.simple)")
   
-  echo "\n📊 2. Type Conversion Showcase"
+  echo "\n📊 2. Type Conversion Examples"
   echo "------------------------------"
   
   # Test various conversion scenarios

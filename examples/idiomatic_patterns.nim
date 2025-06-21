@@ -115,7 +115,7 @@ proc main() =
           let item = getArrayElementValue(js.context, historyArray, i.uint32, string)
           echo "    [", i, "] ", item
   
-  echo "\n🎭 5. Pattern Comparison Showcase"
+  echo "\n🎭 5. Pattern Comparison Examples"
   echo "--------------------------------"
   
   # Set up comparison data

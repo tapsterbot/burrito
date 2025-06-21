@@ -372,17 +372,26 @@ echo js.eval("point[0] + point[1]")             # 300
 
 ## Examples
 
-Run the examples:
+Burrito includes comprehensive examples showcasing all features from beginner-friendly to advanced:
+
+### Core Examples
 ```bash
 nim c -r examples/basic_example.nim             # Basic JavaScript evaluation
-nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript
+nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript  
 nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridging
-nim c -r examples/object_manipulation.nim       # Object and array manipulation
-nim c -r examples/advanced_functions.nim        # Advanced functions with type checking
-nim c -r examples/type_marshaling.nim           # Comprehensive type marshaling
-nim c -r examples/auto_memory_management.nim    # Automatic memory management helpers
-nim c -r examples/idiomatic_syntax.nim          # Beautiful idiomatic Nim syntax
 ```
+
+### More Feature Examples
+```bash
+nim c -r examples/comprehensive_features.nim    # ALL features from high-level to low-level
+nim c -r examples/idiomatic_patterns.nim        # Beautiful idiomatic Nim syntax patterns
+nim c -r examples/type_system.nim               # Advanced type marshaling and safety
+```
+
+**Example Descriptions:**
+- **`comprehensive_features.nim`** - Complete demonstration from high-level type inference and idiomatic syntax down to low-level manual memory management
+- **`idiomatic_patterns.nim`** - Focus on beautiful Nim syntax patterns, type inference magic, and automatic memory management
+- **`type_system.nim`** - Advanced type marshaling, custom object conversion, and type safety demonstrations
 
 Or run all examples at once:
 ```bash
