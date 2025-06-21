@@ -1,0 +1,27 @@
+# Nim build artifacts
+nimcache/
+*.exe
+examples/basic_example
+examples/advanced_example
+src/quickjs_nim
+
+# QuickJS source and builds
+quickjs/
+quickjs-*.tar.xz
+
+# Documentation
+docs/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+#Claude
+.claude/
