@@ -47,7 +47,7 @@ A lightweight and focused Nim wrapper for the [QuickJS JavaScript engine](https:
 
 ## Quick Start
 
-### Basic Usage
+### Basic JavaScript Evaluation
 
 ```nim
 import burrito
@@ -57,80 +57,32 @@ var js = newQuickJS()
 defer: js.close()
 
 # Evaluate JavaScript code
-let result = js.eval("2 + 3 * 4")
-echo result  # "14"
-
-# Work with strings
-let greeting = js.eval("'Hello ' + 'World!'")
-echo greeting  # "Hello World!"
-
-# Use JavaScript built-ins
-let jsonResult = js.eval("JSON.stringify({name: 'Nim', type: 'awesome'})")
-echo jsonResult  # "{\"name\":\"Nim\",\"type\":\"awesome\"}"
+echo js.eval("2 + 3")                    # 5
+echo js.eval("'Hello ' + 'World!'")      # Hello World!
+echo js.eval("Math.sqrt(16)")            # 4
 ```
 
-### Working with Global Variables
+### Calling Nim Functions from JavaScript
 
 ```nim
 import burrito
-import std/tables
+import std/times
+
+# Define Nim functions
+proc getTime(): string = now().format("yyyy-MM-dd HH:mm:ss")
+proc getMessage(): string = "Hello from Nim! 🌯"
 
 var js = newQuickJS()
 defer: js.close()
 
-# Set global variables from Nim
-var globals = initTable[string, string]()
-globals["name"] = "QuickJS"
-globals["version"] = "2025-04-26"
+# Set up the bridge and register functions
+js.setupNimBridge()
+js.registerFunction("getTime", getTime)
+js.registerFunction("getMessage", getMessage)
 
-let result = js.evalWithGlobals(
-  "`Hello ${name}, version ${version}!`",
-  globals
-)
-echo result  # "Hello QuickJS, version 2025-04-26!"
-```
-
-### Defining JavaScript Functions from Nim
-
-```nim
-import burrito
-
-var js = newQuickJS()
-defer: js.close()
-
-# Define JavaScript functions as strings
-js.setJSFunction("addTen", "function(x) { return x + 10; }")
-js.setJSFunction("greet", "function(name) { return 'Hello, ' + name + '!'; }")
-
-let result1 = js.eval("addTen(5)")  # "15"
-let result2 = js.eval("greet('Alice')")  # "Hello, Alice!"
-```
-
-### Advanced Example
-
-```nim
-import burrito
-
-# Process data in Nim with full access to Nim's ecosystem
-let input = "sample data"
-# ... complex Nim logic here ...
-let processed = "Processed: " & input
-
-var js = newQuickJS()
-defer: js.close()
-
-# Set the processed data as a global variable
-var globals = initTable[string, string]()
-globals["processedData"] = processed
-
-# Execute complex JavaScript using the processed data
-let result = js.evalWithGlobals("""
-  const data = [1, 2, 3, 4, 5];
-  const doubled = data.map(x => x * 2);
-  `${processedData} - Numbers: ` + doubled.join(', ');
-""", globals)
-
-echo result
+# Call Nim functions from JavaScript!
+echo js.eval("getTime()")     # "2025-06-21 17:33:00"
+echo js.eval("getMessage()")  # "Hello from Nim! 🌯"
 ```
 
 ## API Reference
@@ -162,17 +114,18 @@ Evaluates JavaScript code with global variables set from Nim.
 #### `setJSFunction(js: QuickJS, name: string, value: string)`
 Sets a JavaScript function in the global scope from a string definition.
 
+#### `setupNimBridge(js: var QuickJS)`
+Sets up the bridge system to allow JavaScript to call Nim functions.
+
+#### `registerFunction(js: var QuickJS, name: string, nimFunc: NimFunction)`
+Registers a Nim function to be callable from JavaScript. Requires `setupNimBridge()` to be called first.
+
 ## Examples
 
-The `examples/` directory contains:
-
-- **`basic_example.nim`**: Basic usage, function registration, simple evaluations
-- **`advanced_example.nim`**: Complex expressions, error handling, advanced patterns
-
-Run examples with:
+Run the examples:
 ```bash
-nim c -r examples/basic_example.nim
-nim c -r examples/advanced_example.nim
+nim c -r examples/basic_example.nim        # Basic JavaScript evaluation
+nim c -r examples/call_nim_from_js.nim     # Call Nim functions from JavaScript
 ```
 
 ## Architecture
