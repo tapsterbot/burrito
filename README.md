@@ -97,13 +97,11 @@ import burrito
 # Different function signatures are supported
 proc square(ctx: ptr JSContext, arg: JSValue): JSValue =
   let num = toNimFloat(ctx, arg)
-  # No manual freeing needed - handled automatically! ✨
   nimFloatToJS(ctx, num * num)
 
 proc addNumbers(ctx: ptr JSContext, arg1, arg2: JSValue): JSValue =
   let a = toNimFloat(ctx, arg1)
   let b = toNimFloat(ctx, arg2)
-  # No manual freeing needed - handled automatically! ✨
   nimFloatToJS(ctx, a + b)
 
 proc concatenate(ctx: ptr JSContext, args: seq[JSValue]): JSValue =
@@ -240,7 +238,7 @@ Registers a Nim function to be callable from JavaScript using native C function 
 
 These functions automatically handle `JS_FreeValue` for you, making memory management effortless:
 
-#### Direct Value Access (No Manual Freeing!)
+#### Direct Value Access
 - `getPropertyValue[T](ctx: ptr JSContext, obj: JSValueConst, key: string, target: typedesc[T]): T`
 - `getArrayElementValue[T](ctx: ptr JSContext, arr: JSValueConst, index: uint32, target: typedesc[T]): T`
 - `setGlobalProperty[T](ctx: ptr JSContext, name: string, value: T): bool`
