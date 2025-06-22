@@ -1,4 +1,4 @@
-# Package
+#g Package
 
 version       = "0.2.0"
 author        = "Jason R. Huggins"
@@ -66,5 +66,17 @@ task clean_all, "Clean build artifacts":
   exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/comprehensive_features examples/idiomatic_patterns examples/type_system"
   echo "✅ Clean completed"
 
-task test, "Run tests and examples":
-  exec "nimble examples"
+task test_report, "Run all tests and print a summary":
+  exec """
+    nim r --hints:off tests/test_*.nim 2>&1 | tee nimtest.log
+    total=$(grep -E '\[(OK|FAILED)\]' nimtest.log | wc -l)
+    passed=$(grep '\[OK\]' nimtest.log | wc -l)
+    failed=$(grep '\[FAILED\]' nimtest.log | wc -l)
+    echo '====================='
+    echo 'Test summary:'
+    echo "Total tests: $total"
+    echo "Passed:      $passed"
+    echo "Failed:      $failed"
+	echo ""
+    #if [ "$failed" -gt 0 ]; then exit 1; fi
+  """

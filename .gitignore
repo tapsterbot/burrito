@@ -1,4 +1,5 @@
 # Nim build artifacts
+nimtest.log
 tmp/
 nimcache/
 *.exe
