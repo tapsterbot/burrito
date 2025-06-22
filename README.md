@@ -115,13 +115,87 @@ defer: js.close()
 
 # Register functions with different arities
 js.registerFunction("square", square)           # 1 argument
-js.registerFunction("add", addNumbers)          # 2 arguments  
+js.registerFunction("add", addNumbers)          # 2 arguments
 js.registerFunction("concat", concatenate)      # variadic arguments
 
 echo js.eval("square(7)")                       # 49
 echo js.eval("add(5, 3)")                       # 8
 echo js.eval("concat('Hello', ' ', 'World!')")  # Hello World!
 ```
+
+## Standard Library Modules (std/os)
+
+Burrito supports QuickJS's built-in `std` and `os` modules for file I/O, environment access, and system operations:
+
+### Basic std Module Usage
+
+```nim
+import burrito
+
+# Enable std module
+var js = newQuickJS(configWithStdLib())
+defer: js.close()
+
+# Access environment variables and printf functionality
+discard js.evalModule("""
+  import * as std from "std";
+
+  let shell = std.getenv("SHELL") || "unknown";
+  std.out.printf("Current shell: %s\n", shell);
+""")
+```
+
+### Basic os Module Usage
+
+```nim
+import burrito
+
+# Enable os module
+var js = newQuickJS(configWithOsLib())
+defer: js.close()
+
+# Get current directory and system info
+discard js.evalModule("""
+  import * as os from "os";
+
+  let [cwd, err] = os.getcwd();
+  if (!err) {
+    console.log("Working directory:", cwd);
+    console.log("Platform:", os.platform);
+  }
+""")
+```
+
+### Using Both Modules
+
+```nim
+import burrito
+
+# Enable both std and os modules
+var js = newQuickJS(configWithBothLibs())
+defer: js.close()
+
+# Combine functionality from both modules
+discard js.evalModule("""
+  import * as std from "std";
+  import * as os from "os";
+
+  let [cwd] = os.getcwd();
+  let shell = std.getenv("SHELL") || "unknown";
+
+  std.out.printf("Running %s in %s\n",
+                 shell.split('/').pop(),
+                 cwd.split('/').pop());
+""")
+```
+
+**Available configurations:**
+- `newQuickJS()` - Default (no modules)
+- `newQuickJS(configWithStdLib())` - std module only
+- `newQuickJS(configWithOsLib())` - os module only
+- `newQuickJS(configWithBothLibs())` - Both modules
+
+**Note:** ES6 modules correctly return `undefined` per specification. Use module side effects (like `printf`, `console.log`) or `export default` for return values.
 
 ## Memory Management
 
@@ -153,7 +227,7 @@ If you must share an instance across threads, use locks:
 ```nim
 import std/locks
 
-var 
+var
   js = newQuickJS()
   jsLock: Lock
 
@@ -179,14 +253,23 @@ proc safeEval(code: string): string =
 
 ### Core Functions
 
-#### `newQuickJS(): QuickJS`
+#### `newQuickJS(config: QuickJSConfig = defaultConfig()): QuickJS`
 Creates a new QuickJS instance with runtime and context. **Not thread-safe** - use one instance per thread or external locking.
+
+**Configuration options:**
+- `defaultConfig()` - Basic QuickJS (no std/os modules)
+- `configWithStdLib()` - Enable std module
+- `configWithOsLib()` - Enable os module
+- `configWithBothLibs()` - Enable both std and os modules
 
 #### `close(js: var QuickJS)`
 Properly cleans up QuickJS instance (called automatically with `defer`).
 
 #### `eval(js: QuickJS, code: string, filename: string = "<eval>"): string`
 Evaluates JavaScript code and returns the result as a string.
+
+#### `evalModule(js: QuickJS, code: string, filename: string = "<module>"): string`
+Evaluates JavaScript code as an ES6 module (enables import/export syntax). Returns `undefined` per ES6 specification - use for side effects or `export default`.
 
 #### `evalWithGlobals(js: QuickJS, code: string, globals: Table[string, string]): string`
 Evaluates JavaScript code with global variables set from Nim.
@@ -197,6 +280,12 @@ Sets a JavaScript function in the global scope from a string definition.
 #### `registerFunction(js: var QuickJS, name: string, nimFunc: NimFunction0|1|2|3|Variadic)`
 Registers a Nim function to be callable from JavaScript using native C function bridging. The function type is automatically detected based on the signature. No setup required!
 
+#### `canUseStdLib(js: QuickJS): bool`
+Check if std module is available in this QuickJS instance.
+
+#### `canUseOsLib(js: QuickJS): bool`
+Check if os module is available in this QuickJS instance.
+
 ### Value Conversion Helpers
 
 #### JavaScript to Nim
@@ -205,7 +294,7 @@ Registers a Nim function to be callable from JavaScript using native C function 
 - `toNimFloat(ctx: ptr JSContext, val: JSValueConst): float64`
 - `toNimBool(ctx: ptr JSContext, val: JSValueConst): bool`
 
-#### Nim to JavaScript  
+#### Nim to JavaScript
 - `nimStringToJS(ctx: ptr JSContext, str: string): JSValue`
 - `nimIntToJS(ctx: ptr JSContext, val: int32): JSValue`
 - `nimFloatToJS(ctx: ptr JSContext, val: float64): JSValue`
@@ -265,7 +354,7 @@ let name = toNimString(ctx, nameVal)
 
 # New ways (automatic memory management + idiomatic syntax)
 let name = ctx.getString("userName")          # Type-specific method
-let name = ctx.get("userName", string)       # Generic method  
+let name = ctx.get("userName", string)       # Generic method
 ctx["userName"] = "Alice"                    # Idiomatic assignment
 ```
 
@@ -298,7 +387,7 @@ Burrito provides advanced type marshaling capabilities for seamless conversion b
 - `seqToJS[T](ctx: ptr JSContext, s: seq[T]): JSValue` - Convert Nim sequence to JavaScript array
   - Supports: `string`, `int`/`int32`, `float`/`float64`, `bool`, and complex types (via string representation)
 
-#### Table and Object Conversions  
+#### Table and Object Conversions
 - `tableToJS[K,V](ctx: ptr JSContext, t: Table[K,V]): JSValue` - Convert Nim Table to JavaScript object
   - Key types: Any type convertible to string
   - Value types: `string`, `int`/`int32`, `float`/`float64`, `bool`, and complex types (via string representation)
@@ -326,13 +415,13 @@ proc personToJS(ctx: ptr JSContext, person: Person): JSValue =
 
 proc jsToPerson(ctx: ptr JSContext, jsObj: JSValueConst): Person =
   let nameVal = getProperty(ctx, jsObj, "name")
-  let ageVal = getProperty(ctx, jsObj, "age") 
+  let ageVal = getProperty(ctx, jsObj, "age")
   let emailVal = getProperty(ctx, jsObj, "email")
   defer:
     JS_FreeValue(ctx, nameVal)
     JS_FreeValue(ctx, ageVal)
     JS_FreeValue(ctx, emailVal)
-  
+
   result = Person(
     name: toNimString(ctx, nameVal),
     age: toNimInt(ctx, ageVal).int,
@@ -377,7 +466,7 @@ Burrito includes comprehensive examples showcasing all features from beginner-fr
 ### Core Examples
 ```bash
 nim c -r examples/basic_example.nim             # Basic JavaScript evaluation
-nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript  
+nim c -r examples/call_nim_from_js.nim          # Call Nim functions from JavaScript
 nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridging
 ```
 
@@ -392,6 +481,7 @@ nim c -r examples/type_system.nim               # Advanced type marshaling and s
 - **`comprehensive_features.nim`** - Complete demonstration from high-level type inference and idiomatic syntax down to low-level manual memory management
 - **`idiomatic_patterns.nim`** - Focus on beautiful Nim syntax patterns, type inference magic, and automatic memory management
 - **`type_system.nim`** - Advanced type marshaling, custom object conversion, and type safety demonstrations
+- **`module_example.nim`** - QuickJS std/os module functionality: environment access, file operations, and system information
 
 Or run all examples at once:
 ```bash

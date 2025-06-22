@@ -9,6 +9,8 @@ examples/call_nim_from_js
 examples/comprehensive_features
 examples/idiomatic_patterns
 examples/type_system
+examples/module_example
+tests/test_basic
 src/burrito
 
 # QuickJS source and builds
