@@ -1026,3 +1026,17 @@ proc registerFunction*(js: var QuickJS, name: string, nimFunc: NimFunctionVariad
   discard JS_DefinePropertyValueStr(js.context, globalObj, name.cstring, jsFunc,
                                    JS_PROP_WRITABLE or JS_PROP_CONFIGURABLE)
   JS_FreeValue(js.context, globalObj)
+
+proc runPendingJobs*(js: QuickJS) =
+  ## Execute all pending JavaScript jobs (promises, async operations)
+  ## This is needed after loading modules or running async code
+  var pctx: ptr JSContext = nil
+  while JS_ExecutePendingJob(js.runtime, addr pctx) > 0:
+    discard
+
+proc processStdLoop*(js: QuickJS) =
+  ## Process the QuickJS standard event loop once
+  ## This handles timers, I/O, and other async operations
+  ## Note: Only available when enableStdHandlers is true
+  if js.config.enableStdHandlers:
+    js_std_loop(js.context)

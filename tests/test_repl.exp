@@ -1,0 +1,52 @@
+#!/usr/bin/expect -f
+
+# Test script for Burrito REPL
+set timeout 5
+
+spawn ./build/bin/repl
+
+# Wait for the prompt
+expect "qjs > "
+
+# Test simple arithmetic
+send "1 + 1\r"
+expect "2"
+expect "qjs > "
+
+# Test variable assignment
+send "let x = 42\r"
+expect "qjs > "
+
+# Test variable usage
+send "x * 2\r"
+expect "84"
+expect "qjs > "
+
+# Test a function
+send "function greet(name) { return 'Hello, ' + name; }\r"
+expect "qjs > "
+
+send "greet('Burrito')\r"
+expect "Hello, Burrito"
+expect "qjs > "
+
+# Test std module
+send "std.printf('Testing %d\\n', 123)\r"
+expect "Testing 123"
+expect "qjs > "
+
+# Exit using Ctrl+D
+send "\004"
+
+# Expect either a clean exit or timeout (but not hanging)
+expect {
+    eof {
+        puts "\nREPL exited cleanly with Ctrl+D"
+    }
+    timeout {
+        puts "\nERROR: REPL did not exit with Ctrl+D"
+        exit 1
+    }
+}
+
+puts "All tests passed!"

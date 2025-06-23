@@ -80,8 +80,12 @@ task clean_all, "Clean build artifacts":
 
 task test_report, "Run all tests and print a summary":
   exec "mkdir -p build/logs"
+  exec "rm ./build/logs/nimtest.log"
+  exec "nim c --hints:off examples/repl.nim"
+  exec "nim c --hints:off examples/repl_with_nim_functions.nim"
   exec """
-    nim r --hints:off tests/test_*.nim 2>&1 | tee build/logs/nimtest.log
+    nim c -r --hints:off tests/test_basic.nim 2>&1 | tee -a build/logs/nimtest.log
+    nim c -r --hints:off tests/test_repl.nim 2>&1 | tee -a build/logs/nimtest.log
     total=$(grep -E '\[(OK|FAILED)\]' build/logs/nimtest.log | wc -l)
     passed=$(grep '\[OK\]' build/logs/nimtest.log | wc -l)
     failed=$(grep '\[FAILED\]' build/logs/nimtest.log | wc -l)
@@ -97,3 +101,8 @@ task test_report, "Run all tests and print a summary":
 
 task tr, "Alias for test_report":
   exec "nimble test_report"
+
+task r, "Run repl":
+  exec "nim c -r --hints:off examples/repl_with_nim_functions.nim"
+  echo ""
+

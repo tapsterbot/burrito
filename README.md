@@ -4,12 +4,14 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 
 ## Features
 
-- 📦 **Simple**: Easy-to-use API for embedding JavaScript in Nim
-- 🔗 **Two-way**: Run JavaScript from Nim and call Nim functions from JavaScript
-- 🔢 **Flexible**: Support for functions with different numbers of arguments
-- 🔄 **Type marshaling**: Comprehensive conversion between Nim and JavaScript data structures
-- 🚀 **Performance**: Native C function bridging with zero overhead
-- 🧠 **Smart**: Support for sequences, tables, tuples, and custom object types
+- 🎯 **Embeddable REPL**: Drop a complete JavaScript REPL into your Nim app with just a few lines of code
+- 🎨 **Full-featured REPL**: Syntax highlighting, command history, multi-line editing - the complete QuickJS REPL experience
+- 📦 **Simple API**: Easy-to-use API for embedding JavaScript in Nim
+- 🔗 **Two-way Binding**: Run JavaScript from Nim and call Nim functions from JavaScript
+- 🔢 **Flexible Functions**: Support for functions with different numbers of arguments
+- 🔄 **Type Marshaling**: Comprehensive conversion between Nim and JavaScript data structures
+- 🚀 **Native Performance**: Native C function bridging with zero overhead
+- 📚 **Standard Modules**: Full support for QuickJS std and os modules
 
 ## Installation
 
@@ -121,6 +123,90 @@ js.registerFunction("concat", concatenate)      # variadic arguments
 echo js.eval("square(7)")                       # 49
 echo js.eval("add(5, 3)")                       # 8
 echo js.eval("concat('Hello', ' ', 'World!')")  # Hello World!
+```
+
+## 🎯 Embedded JavaScript REPL
+
+**The killer feature**: Embed a complete JavaScript REPL into your Nim applications! Perfect for:
+- Interactive debugging and development tools
+- Live coding environments
+- Educational applications
+- Developer consoles in your apps
+- Interactive scripting interfaces
+
+### Drop-in REPL Example
+
+```nim
+import burrito
+
+proc main() =
+  # Create QuickJS instance with full REPL support
+  var js = newQuickJS(QuickJSConfig(
+    enableStdHandlers: true,
+    includeStdLib: true,
+    includeOsLib: true
+  ))
+  defer: js.close()
+
+  # Add your custom functions to the REPL environment
+  proc greet(ctx: ptr JSContext, name: JSValue): JSValue =
+    let nameStr = toNimString(ctx, name)
+    nimStringToJS(ctx, "Hello from Nim, " & nameStr & "!")
+
+  js.registerFunction("greet", greet)
+
+  # Load and start the interactive REPL
+  let replCode = readFile("quickjs/repl.js")
+  discard js.evalModule(replCode, "<repl>")
+  js.runPendingJobs()
+
+  # REPL is now running! Users can:
+  # - Call your Nim functions: greet("Alice")
+  # - Use std/os modules: std.printf("Hello %s\n", "world")
+  # - Get syntax highlighting and command history
+  # - Exit with Ctrl+D, Ctrl+C, or \q
+  js.processStdLoop()
+
+when isMainModule:
+  main()
+```
+
+### Standalone REPL
+
+Want to try it right now? Burrito includes a standalone REPL:
+
+```bash
+nim c -r examples/repl.nim
+```
+
+This gives you:
+- ✅ Full QuickJS REPL with syntax highlighting
+- ✅ Command history (arrow keys work)
+- ✅ Multi-line input support
+- ✅ Access to std and os modules
+- ✅ Clean exit with Ctrl+D
+
+### REPL in Your Application
+
+Embedding the REPL into your own application is incredibly simple:
+
+```nim
+# In your application code
+proc startDebugREPL(myAppContext: MyAppType) =
+  var js = newQuickJS(configWithBothLibs())
+  defer: js.close()
+
+  # Expose your app's functionality to the REPL
+  proc getAppStatus(ctx: ptr JSContext): JSValue =
+    nimStringToJS(ctx, myAppContext.status)
+
+  js.registerFunction("getAppStatus", getAppStatus)
+
+  # Start REPL for debugging/development
+  let replCode = readFile("quickjs/repl.js")
+  discard js.evalModule(replCode, "<debug-repl>")
+  js.runPendingJobs()
+  js.processStdLoop()
 ```
 
 ## Standard Library Modules (std/os)
@@ -463,6 +549,12 @@ echo js.eval("point[0] + point[1]")             # 300
 
 Burrito includes comprehensive examples showcasing all features from beginner-friendly to advanced:
 
+### 🎯 REPL Examples
+```bash
+nim c -r examples/repl.nim                      # 🌟 Interactive JavaScript REPL - the killer feature!
+nim c -r examples/repl_with_nim_functions.nim   # 🎯 REPL with custom Nim functions exposed
+```
+
 ### Core Examples
 ```bash
 nim c -r examples/basic_example.nim             # Basic JavaScript evaluation
@@ -478,6 +570,8 @@ nim c -r examples/type_system.nim               # Advanced type marshaling and s
 ```
 
 **Example Descriptions:**
+- **`repl.nim`** - Standalone JavaScript REPL with full QuickJS features
+- **`repl_with_nim_functions.nim`** - 🌟 **Drop-in REPL example** showing how to expose custom Nim functions to the JavaScript REPL environment
 - **`comprehensive_features.nim`** - Complete demonstration from high-level type inference and idiomatic syntax down to low-level manual memory management
 - **`idiomatic_patterns.nim`** - Focus on beautiful Nim syntax patterns, type inference magic, and automatic memory management
 - **`type_system.nim`** - Advanced type marshaling, custom object conversion, and type safety demonstrations
