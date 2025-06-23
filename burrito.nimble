@@ -109,3 +109,13 @@ task repl, "Run repl":
 task r, "Alias for repl":
   exec "nimble repl --silent"
 
+task docs, "Generate API documentation":
+  echo "📚 Generating API documentation..."
+  exec "nim doc --outdir:docs --git.url:https://github.com/tapsterbot/burrito --git.commit:main --git.devel:main src/burrito.nim"
+  echo "✅ Documentation generated in docs/burrito.html"
+
+task serve_docs, "Generate API documentation":
+  exec "python3 -m http.server --directory docs"
+
+task sd, "Alias for serve_docs":
+  exec "nimble serve_docs --silent"

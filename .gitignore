@@ -9,7 +9,7 @@ quickjs/
 quickjs-*.tar.xz
 
 # Documentation
-docs/
+#docs/
 
 # OS specific
 .DS_Store

@@ -1,8 +1,50 @@
 ## Burrito - QuickJS Nim Wrapper
 ##
-## A lightweight wrapper for the QuickJS JavaScript engine.
-## This module provides basic functionality to create JS contexts,
+## A wrapper for the QuickJS JavaScript engine.
+## This module provides comprehensive functionality to create JS contexts,
 ## evaluate JavaScript code, and expose Nim functions to JavaScript.
+##
+## **Example: Basic Usage**
+## ```nim
+## import burrito
+##
+## # Create a QuickJS instance
+## var js = newQuickJS()
+##
+## # Evaluate JavaScript expressions
+## echo js.eval("2 + 3")                    # Output: 5
+## echo js.eval("'Hello ' + 'World!'")      # Output: Hello World!
+##
+## # Expose Nim functions to JavaScript
+## proc greet(ctx: ptr JSContext, name: JSValue): JSValue =
+##   let nameStr = toNimString(ctx, name)
+##   result = nimStringToJS(ctx, "Hello from Nim, " & nameStr & "!")
+##
+## js.registerFunction("greet", greet)
+## echo js.eval("greet('Burrito')")        # Output: Hello from Nim, Burrito!
+## js.close()
+## ```
+##
+## **Example: Embedded REPL**
+## ```nim
+## import burrito
+##
+## # Create QuickJS with full standard library support
+## var js = newQuickJS(configWithBothLibs())
+##
+## # Add custom functions accessible in the REPL
+## proc getCurrentTime(ctx: ptr JSContext): JSValue =
+##   nimStringToJS(ctx, now().format("yyyy-MM-dd HH:mm:ss"))
+##
+## js.registerFunction("getCurrentTime", getCurrentTime)
+##
+## # Load and start the REPL
+## let replCode = readFile("quickjs/repl.js")
+## discard js.evalModule(replCode, "<repl>")
+## js.runPendingJobs()
+## js.processStdLoop()  # Interactive REPL runs here
+## js.close()
+## ```
 
 import std/[tables, macros, json, strutils, os]
 
@@ -483,7 +525,7 @@ proc set*[T](ctx: ptr JSContext, name: string, value: T) =
 
 # Even more idiomatic with method call syntax
 proc `[]=`*[T](ctx: ptr JSContext, name: string, value: T) =
-  ## Set a global property value using idiomatic []= syntax: ctx["userName"] = "Alice"
+  ## Set a global property value using idiomatic syntax for assignment to JavaScript globals
   discard setGlobalProperty(ctx, name, value)
 
 # Type-specific getters for the most common cases

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burrito - QuickJS Nim Wrapper</title>
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --primary-dark: #E85A2A;
+            --secondary: #8B5FBF;
+            --dark: #2C3E50;
+            --text: #34495E;
+            --light-bg: #F8F9FA;
+            --white: #FFFFFF;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --primary: #FF7F50;
+            --primary-dark: #FF6B35;
+            --secondary: #9D71D9;
+            --dark: #1a1a1a;
+            --text: #e0e0e0;
+            --light-bg: #2d2d2d;
+            --white: #1a1a1a;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--white);
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF4E88 50%, #8B5FBF 100%);
+            color: #FFFFFF;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            padding: 2rem;
+        }
+
+        [data-theme="dark"] .hero {
+            background: linear-gradient(135deg, #FF7F50 0%, #FF5A92 50%, #9D71D9 100%);
+        }
+
+        .hero h1 {
+            font-size: 8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .hero .tagline {
+            font-size: 2rem;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .button-primary {
+            background: var(--white);
+            color: var(--primary);
+        }
+
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .button-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--white);
+            border: 2px solid var(--white);
+        }
+
+        .button-secondary:hover {
+            background: var(--white);
+            color: var(--primary);
+        }
+
+        .section {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FF6B35 0%, #FF4E88 50%, #8B5FBF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .section-title {
+            background: linear-gradient(135deg, #FF7F50 0%, #FF5A92 50%, #9D71D9 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .killer-feature {
+            background: var(--light-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 1rem auto 4rem;
+            max-width: 800px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .killer-feature .icon {
+            font-size: 3rem;
+            flex-shrink: 0;
+        }
+
+        .killer-feature h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .code-example {
+            background: var(--dark);
+            color: #E7E9DB;
+            padding: 2rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            box-shadow: var(--shadow-lg);
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #E7E9DB;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .copy-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .copy-button:active {
+            transform: scale(0.95);
+        }
+
+        .code-example pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+
+        .code-example .comment {
+            color: #95A99C;
+        }
+
+        .code-example .keyword {
+            color: #FF6B35;
+        }
+
+        [data-theme="dark"] .code-example {
+            background: #1a1a1a;
+            border: 1px solid #333;
+        }
+
+        [data-theme="dark"] .code-example .keyword {
+            color: #FF7F50;
+        }
+
+        .code-example .string {
+            color: #8B5FBF;
+        }
+
+        [data-theme="dark"] .code-example .string {
+            color: #9D71D9;
+        }
+
+        .code-example .function {
+            color: #FFE66D;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .feature-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background: var(--dark);
+            color: var(--white);
+            padding: 3rem 0;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: #FFB366;
+            text-decoration: none;
+        }
+
+        [data-theme="dark"] footer a {
+            color: #FFC080;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-credit {
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            opacity: 0.7;
+        }
+
+        [data-theme="dark"] .footer-credit {
+            opacity: 0.9;
+            color: #d0d0d0;
+        }
+
+        .what-is-section {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .what-is-section p {
+            font-size: 1.8rem;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        [data-theme="dark"] .what-is-section p {
+            color: #c0c0c0;
+        }
+
+        .perfect-for-section {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .perfect-for-section p {
+            font-size: 1.2rem;
+            line-height: 2;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .perfect-for-section .use-case {
+            display: inline;
+            background: linear-gradient(135deg, #FF6B35 0%, #FF4E88 50%, #8B5FBF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] .perfect-for-section .use-case {
+            background: linear-gradient(135deg, #FF7F50 0%, #FF5A92 50%, #9D71D9 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        [data-theme="dark"] .perfect-for-section p {
+            color: #c0c0c0;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 5rem;
+            }
+            
+            .hero .tagline {
+                font-size: 1.5rem;
+            }
+            
+            .section-title {
+                font-size: 2.5rem;
+            }
+            
+            .what-is-section p {
+                font-size: 1.4rem;
+            }
+            
+            .killer-feature {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            opacity: 0.7;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.25);
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        [data-theme="dark"] .feature-card {
+            background: #2d2d2d;
+            border-color: #444;
+        }
+
+        [data-theme="dark"] .feature-card h3 {
+            color: #e0e0e0;
+        }
+
+        [data-theme="dark"] .feature-card p {
+            color: #c0c0c0;
+        }
+
+        [data-theme="dark"] .feature-card:hover {
+            border-color: var(--primary);
+        }
+
+        [data-theme="dark"] .killer-feature {
+            background: #2d2d2d;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="dark"] .killer-feature h3 {
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .killer-feature p {
+            color: #e0e0e0;
+        }
+
+        [data-theme="dark"] .button-primary {
+            background: #2d2d2d;
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .button-secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span id="theme-icon">☀️</span>
+    </button>
+    <div class="hero">
+        <div class="container">
+            <h1>🌯 Burrito</h1>
+            <p class="tagline">
+                A QuickJS wrapper for Nim 👑
+            </p>
+            <div class="buttons">
+                <a href="burrito.html" class="button button-primary">
+                    <span>📚</span> API Documentation
+                </a>
+                <a href="https://github.com/tapsterbot/burrito" class="button button-secondary">
+                    <span>🐙</span> View on GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="section">
+            <h2 class="section-title">What is Burrito?</h2>
+            <div class="what-is-section">
+                <p>Burrito is a comprehensive wrapper around the QuickJS JavaScript engine for Nim. It lets you embed JavaScript execution directly into your Nim applications with minimal overhead.</p>
+            </div>
+        </section>
+
+        <div class="killer-feature">
+            <div class="icon">🎯</div>
+            <div>
+                <h3>The Killer Feature</h3>
+                <p>Drop a complete JavaScript REPL with syntax highlighting, command history, and custom Nim function exposure into your application with just a few lines of code!</p>
+            </div>
+        </div>
+
+        <section class="section">
+            <h2 class="section-title">Embedded REPL Example</h2>
+            <div class="code-example">
+                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                <pre><span class="function">cat</span> > burrito_repl.nim &lt;&lt;EOF
+<span class="keyword">import</span> burrito
+
+<span class="comment"># Create QuickJS with full standard library support</span>
+<span class="keyword">var</span> js = <span class="function">newQuickJS</span>(<span class="function">configWithBothLibs</span>())
+
+<span class="comment"># Expose custom Nim function to the REPL</span>
+<span class="keyword">proc</span> <span class="function">greet</span>(ctx: <span class="keyword">ptr</span> JSContext, name: JSValue): JSValue =
+  <span class="keyword">let</span> nameStr = <span class="function">toNimString</span>(ctx, name)
+  result = <span class="function">nimStringToJS</span>(ctx, <span class="string">"Hello from Nim, "</span> & nameStr & <span class="string">"!"</span>)
+
+js.<span class="function">registerFunction</span>(<span class="string">"greet"</span>, greet)
+
+<span class="comment"># Start the embedded REPL</span>
+<span class="keyword">let</span> replCode = <span class="function">readFile</span>(<span class="string">"quickjs/repl.js"</span>)
+<span class="function">discard</span> js.<span class="function">evalModule</span>(replCode, <span class="string">"&lt;repl&gt;"</span>)
+js.<span class="function">runPendingJobs</span>()
+js.<span class="function">processStdLoop</span>()  <span class="comment"># Interactive REPL runs here!</span>
+js.<span class="function">close</span>()
+EOF
+
+<span class="function">nim</span> r burrito_repl.nim</pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Basic Usage</h2>
+            <div class="code-example">
+                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                <pre><span class="function">cat</span> > burrito_example.nim &lt;&lt;EOF
+<span class="keyword">import</span> burrito
+
+<span class="keyword">var</span> js = <span class="function">newQuickJS</span>()
+
+<span class="function">echo</span> js.<span class="function">eval</span>(<span class="string">"3 + 4"</span>)
+<span class="function">echo</span> js.<span class="function">eval</span>(<span class="string">"'Hello ' + 'World!'"</span>)
+
+<span class="keyword">proc</span> <span class="function">greet</span>(ctx: <span class="keyword">ptr</span> JSContext, name: JSValue): JSValue =
+  <span class="keyword">let</span> nameStr = <span class="function">toNimString</span>(ctx, name)
+  result = <span class="function">nimStringToJS</span>(ctx, <span class="string">"Hello from Nim, "</span> & nameStr & <span class="string">"!"</span>)
+
+js.<span class="function">registerFunction</span>(<span class="string">"greet"</span>, greet)
+<span class="function">echo</span> js.<span class="function">eval</span>(<span class="string">"greet('Burrito')"</span>)
+js.<span class="function">close</span>()
+EOF
+
+<span class="function">nim</span> r burrito_example.nim</pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Installation</h2>
+            <div class="code-example">
+                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                <pre><span class="comment"># Clone and setup Burrito</span>
+<span class="function">git</span> clone https://github.com/tapsterbot/burrito.git
+<span class="function">cd</span> burrito
+
+<span class="comment"># Download and build QuickJS</span>
+<span class="function">nimble</span> get_quickjs
+<span class="function">nimble</span> build_quickjs
+
+<span class="comment"># Now you can use Burrito!</span>
+<span class="function">nimble</span> example</pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Perfect for:</h2>
+            <div class="perfect-for-section">
+                <p>
+                    <span class="use-case">scripting Nim applications</span>, 
+                    <span class="use-case">configuration with JavaScript</span>, 
+                    <span class="use-case">plugin systems</span>, 
+                    <span class="use-case">dynamic code execution</span>, 
+                    <span class="use-case">user-defined functions</span>,
+                    <span class="use-case">testing and mocking</span>,
+                    <span class="use-case">template engines</span>,
+                    <span class="use-case">automation workflows</span>,
+                    <span class="use-case">live code editing</span>,
+                    <span class="use-case">interactive debugging</span>,
+                    <span class="use-case">game scripting</span>,
+                    <span class="use-case">bot programming</span>,
+                    <span class="use-case">creative coding</span>,
+                    <span class="use-case">procrastination tools</span>,
+                    <span class="use-case">ordering lunch</span>,
+                    <span class="use-case">making coffee</span>,
+                    <span class="use-case">finding socks</span>,
+                    <span class="use-case">training cats</span>,
+                    <span class="use-case">flying drones</span>,
+                    <span class="use-case">driving cars</span>,
+                    <span class="use-case">talking to robots</span>, and 
+                    <span class="use-case">prototyping and experimentation</span>.
+                </p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Key Features</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <div class="icon">🎨</div>
+                    <h3>Embeddable REPL</h3>
+                    <p>Full-featured JavaScript REPL with syntax highlighting and command history</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔗</div>
+                    <h3>Two-way Binding</h3>
+                    <p>Seamlessly call Nim from JavaScript and JavaScript from Nim</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🚀</div>
+                    <h3>Native Performance</h3>
+                    <p>Zero-overhead C function bridging for maximum speed</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🧠</div>
+                    <h3>Smart Types</h3>
+                    <p>Automatic type marshaling between Nim and JavaScript</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📦</div>
+                    <h3>Easy Integration</h3>
+                    <p>Simple API that gets you up and running in minutes</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📚</div>
+                    <h3>Full QuickJS Support</h3>
+                    <p>Access to std and os modules for complete functionality</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>
+                <strong>Burrito</strong> - QuickJS wrapper for Nim<br>
+                <a href="burrito.html">API Docs</a> • 
+                <a href="https://github.com/tapsterbot/burrito">GitHub</a> • 
+                <a href="https://github.com/tapsterbot/burrito#installation">Installation</a> • 
+                <a href="https://github.com/tapsterbot/burrito#examples">Examples</a>
+            </p>
+            <p class="footer-credit">
+                made with <a href="https://bsky.app/profile/hugs.bsky.social">hugs</a> and robots
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Theme handling
+        function getTheme() {
+            return localStorage.getItem('theme') || 'dark';
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            const currentTheme = getTheme();
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        }
+
+        // Initialize theme on load
+        setTheme(getTheme());
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling;
+            const code = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(code).then(function() {
+                button.textContent = 'Copied!';
+                setTimeout(function() {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(function() {
+                button.textContent = 'Failed';
+                setTimeout(function() {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
