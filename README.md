@@ -22,28 +22,30 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 - Make
 - curl (for downloading QuickJS source)
 - tar (with xz support - available on most modern systems)
+- expect (optional, for running REPL tests)
 
 #### Linux (Ubuntu/Debian)
 ```bash
 sudo apt update
-sudo apt install nim gcc make curl
+sudo apt install nim build-essential curl expect
 ```
 
 #### Termux (Android)
 ```bash
 pkg update
-pkg install nim clang make curl
+pkg install nim build-essential curl expect
 ```
 
 #### macOS
 ```bash
-brew install nim
-# gcc/clang, make, curl, and tar are pre-installed
+brew install nim expect
+# Xcode Command Line Tools provide clang/make: xcode-select --install
+# curl and tar are pre-installed
 ```
 
 #### Other platforms
-- Install Nim from [nim-lang.org](https://nim-lang.org/install.html)
-- Ensure you have a C compiler, make, and curl
+- Install Nim from [nim-lang.org/install.html](https://nim-lang.org/install.html)
+- Ensure you have a C compiler, make, curl, and expect (optional)
 
 ### Install Steps
 
