@@ -12,6 +12,7 @@ const
   else:
     "quickjs/libquickjs.a"
 
+{.passC: "-I.".}  # Add current directory to include path for local headers
 {.passL: quickjsPath.}
 {.passL: "-lm".}
 
