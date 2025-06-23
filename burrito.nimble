@@ -1,4 +1,4 @@
-#g Package
+# Burrito - Nim Package
 
 version       = "0.2.0"
 author        = "Jason R. Huggins"
@@ -79,8 +79,8 @@ task clean_all, "Clean build artifacts":
   echo "✅ Clean completed"
 
 task test_report, "Run all tests and print a summary":
-  exec "mkdir -p build/logs"
-  exec "rm ./build/logs/nimtest.log"
+  exec "mkdir -p ./build/logs"
+  exec "rm -f ./build/logs/nimtest.log"
   exec "nim c --hints:off examples/repl.nim"
   exec "nim c --hints:off examples/repl_with_nim_functions.nim"
   exec """
