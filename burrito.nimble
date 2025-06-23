@@ -16,6 +16,9 @@ task example, "Run the basic example":
   exec "nim c -r --hints:off examples/basic_example.nim"
   echo ""
 
+task e, "Alias for example":
+  exec "nimble example"
+
 task examples, "Run all examples":
   exec "nim c -r --hints:off examples/basic_example.nim"
   exec "nim c -r --hints:off examples/call_nim_from_js.nim"
@@ -25,6 +28,9 @@ task examples, "Run all examples":
   exec "nim c -r --hints:off examples/type_system.nim"
   exec "nim c -r --hints:off examples/module_example.nim"
   echo ""
+
+task es, "Alias for examples":
+  exec "nimble examples"
 
 task get_quickjs, "Download and extract latest QuickJS source":
   if dirExists("quickjs"):
@@ -53,9 +59,13 @@ task delete_quickjs, "Remove QuickJS source directory":
   else:
     echo "ℹ️  No QuickJS directory found"
 
+task cn, "Alias for clean_nim":
+  exec "nimble clean_nim"
+
 task clean_nim, "Clean compiled Nim binaries":
   echo "🧹 Cleaning compiled Nim binaries..."
-  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/comprehensive_features examples/idiomatic_patterns examples/type_system examples/module_example"
+  if dirExists("build"):
+    rmDir("build")
   echo "✅ Nim binaries cleaned"
 
 task clean_all, "Clean build artifacts":
@@ -64,20 +74,26 @@ task clean_all, "Clean build artifacts":
     echo "🧹 Cleaning QuickJS build artifacts..."
     exec "cd quickjs && make clean"
   echo "🧹 Removing compiled Nim binaries..."
-  exec "rm -f src/burrito examples/basic_example examples/call_nim_from_js examples/advanced_native_bridging examples/comprehensive_features examples/idiomatic_patterns examples/type_system examples/module_example"
+  if dirExists("build"):
+    rmDir("build")
   echo "✅ Clean completed"
 
 task test_report, "Run all tests and print a summary":
+  exec "mkdir -p build/logs"
   exec """
-    nim r --hints:off tests/test_*.nim 2>&1 | tee nimtest.log
-    total=$(grep -E '\[(OK|FAILED)\]' nimtest.log | wc -l)
-    passed=$(grep '\[OK\]' nimtest.log | wc -l)
-    failed=$(grep '\[FAILED\]' nimtest.log | wc -l)
+    nim r --hints:off tests/test_*.nim 2>&1 | tee build/logs/nimtest.log
+    total=$(grep -E '\[(OK|FAILED)\]' build/logs/nimtest.log | wc -l)
+    passed=$(grep '\[OK\]' build/logs/nimtest.log | wc -l)
+    failed=$(grep '\[FAILED\]' build/logs/nimtest.log | wc -l)
     echo '====================='
     echo 'Test summary:'
     echo "Total tests: $total"
     echo "Passed:      $passed"
     echo "Failed:      $failed"
-	echo ""
+    echo ""
+    echo ""
     #if [ "$failed" -gt 0 ]; then exit 1; fi
   """
+
+task tr, "Alias for test_report":
+  exec "nimble test_report"
