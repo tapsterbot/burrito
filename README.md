@@ -21,7 +21,29 @@ A Nim wrapper for the [QuickJS JavaScript engine](https://github.com/bellard/qui
 - C compiler (gcc/clang)
 - Make
 - curl (for downloading QuickJS source)
-- tar with xz support (usually pre-installed on Linux/macOS)
+- tar (with xz support - available on most modern systems)
+
+#### Linux (Ubuntu/Debian)
+```bash
+sudo apt update
+sudo apt install nim gcc make curl
+```
+
+#### Termux (Android)
+```bash
+pkg update
+pkg install nim clang make curl
+```
+
+#### macOS
+```bash
+brew install nim
+# gcc/clang, make, curl, and tar are pre-installed
+```
+
+#### Other platforms
+- Install Nim from [nim-lang.org](https://nim-lang.org/install.html)
+- Ensure you have a C compiler, make, and curl
 
 ### Install Steps
 
@@ -372,6 +394,12 @@ Check if std module is available in this QuickJS instance.
 #### `canUseOsLib(js: QuickJS): bool`
 Check if os module is available in this QuickJS instance.
 
+#### `runPendingJobs(js: QuickJS)`
+Execute all pending JavaScript jobs (promises, async operations). This is needed after loading modules or running async code.
+
+#### `processStdLoop(js: QuickJS)`
+Process the QuickJS standard event loop once. This handles timers, I/O, and other async operations. Only available when enableStdHandlers is true. For REPL usage, this runs the complete interactive loop until exit.
+
 ### Value Conversion Helpers
 
 #### JavaScript to Nim
@@ -428,20 +456,39 @@ These functions automatically handle `JS_FreeValue` for you, making memory manag
 - `iterateArray(ctx: ptr JSContext, arr: JSValueConst, callback)` - Iterate with auto memory management
 - `collectArray[T](ctx: ptr JSContext, arr: JSValueConst, target: typedesc[T]): seq[T]` - Collect to sequence
 
-**Examples:**
+**Complete Example:**
 ```nim
+import burrito
+
+# Create QuickJS instance
+var js = newQuickJS()
+defer: js.close()
+
+# Set up some test data in JavaScript
+discard js.eval("""
+  userName = "Alice";
+  userAge = 30;
+  userScore = 95.5;
+  isActive = true;
+""")
+
 # Old way (manual memory management)
-let globalObj = JS_GetGlobalObject(ctx)
-let nameVal = getProperty(ctx, globalObj, "userName")
+let globalObj = JS_GetGlobalObject(js.context)
+let nameVal = getProperty(js.context, globalObj, "userName")
 defer:
-  JS_FreeValue(ctx, globalObj)
-  JS_FreeValue(ctx, nameVal)
-let name = toNimString(ctx, nameVal)
+  JS_FreeValue(js.context, globalObj)
+  JS_FreeValue(js.context, nameVal)
+let name = toNimString(js.context, nameVal)
+
+echo "Old way result: ", name
 
 # New ways (automatic memory management + idiomatic syntax)
-let name = ctx.getString("userName")          # Type-specific method
-let name = ctx.get("userName", string)       # Generic method
-ctx["userName"] = "Alice"                    # Idiomatic assignment
+let name2 = js.context.getString("userName")          # Type-specific method
+let name3 = js.context.get("userName", string)       # Generic method
+js.context["userName"] = "Bob"                       # Idiomatic assignment
+
+echo "New way results: ", name2, ", ", name3
+echo "After assignment: ", js.context.getString("userName")
 ```
 
 ### Idiomatic Syntax Helpers
@@ -450,19 +497,50 @@ Burrito provides beautiful, Nim-like syntax for common operations:
 
 #### Global Property Access
 ```nim
+import burrito
+
+# Create QuickJS instance
+var js = newQuickJS()
+defer: js.close()
+
+# Set up test data
+discard js.eval("""
+  userName = "Alice";
+  userAge = 30;
+  userScore = 95.5;
+  isActive = true;
+""")
+
+let ctx = js.context
+
 # Type-specific methods (recommended)
 let name = ctx.getString("userName")
-let age = ctx.getInt("userAge")
+let age = ctx.getInt("userAge")  
 let score = ctx.getFloat("userScore")
 let active = ctx.getBool("isActive")
 
-# Generic method
-let name = ctx.get("userName", string)
+echo "Type-specific: ", name, ", ", age, ", ", score, ", ", active
+
+# Generic method with explicit type
+let name1 = ctx.get("userName", string)
+let age1 = ctx.get("userAge", int)
+
+echo "Generic explicit: ", name1, ", ", age1
+
+# Auto-detecting method with property access
+let age2 = ctx.get("userAge").int
+let score2 = ctx.get("userScore").float
+let active2 = ctx.get("isActive").bool
+let name2 = ctx.get("userName").string
+
+echo "Auto-detecting: ", name2, ", ", age2, ", ", score2, ", ", active2
 
 # Assignment (works with any type)
-ctx["userName"] = "Alice"
-ctx["userAge"] = 30
-ctx.set("userScore", 95.5)
+ctx["userName"] = "Bob"
+ctx["userAge"] = 25
+ctx.set("userScore", 88.0)
+
+echo "After assignment: ", ctx.getString("userName"), ", ", ctx.getInt("userAge")
 ```
 
 ### Comprehensive Type Marshaling
@@ -530,19 +608,22 @@ let fruits = @["apple", "banana", "cherry"]
 let config = {"host": "localhost", "port": "8080"}.toTable()
 let point = (x: 100, y: 200)
 
-# Set them as global JavaScript variables
-let globalObj = JS_GetGlobalObject(js.context)
-defer: JS_FreeValue(js.context, globalObj)
+let ctx = js.context
 
-discard setProperty(js.context, globalObj, "fruits", seqToJS(js.context, fruits))
-discard setProperty(js.context, globalObj, "config", tableToJS(js.context, config))
-discard setProperty(js.context, globalObj, "point", nimTupleToJSArray(js.context, point))
+# Set them as global JavaScript variables using idiomatic syntax
+ctx["fruits"] = seqToJS(ctx, fruits)
+ctx["config"] = tableToJS(ctx, config)  
+ctx["point"] = nimTupleToJSArray(ctx, point)
 
 # Use them in JavaScript
-echo js.eval("fruits.length")                    # 3
-echo js.eval("fruits.join(', ')")               # apple, banana, cherry
-echo js.eval("config.host + ':' + config.port") # localhost:8080
-echo js.eval("point[0] + point[1]")             # 300
+echo "Fruits length: ", js.eval("fruits.length")                    # 3
+echo "Fruits joined: ", js.eval("fruits.join(', ')")               # apple, banana, cherry
+echo "Config URL: ", js.eval("config.host + ':' + config.port")    # localhost:8080
+echo "Point sum: ", js.eval("point[0] + point[1]")                 # 300
+
+# Can also access them back from Nim
+echo "Back to Nim - first fruit: ", js.eval("fruits[0]")           # apple
+echo "Back to Nim - config host: ", js.eval("config.host")         # localhost
 ```
 
 ## Examples
@@ -551,7 +632,7 @@ Burrito includes comprehensive examples showcasing all features from beginner-fr
 
 ### 🎯 REPL Examples
 ```bash
-nim c -r examples/repl.nim                      # 🌟 Interactive JavaScript REPL - the killer feature!
+nim c -r examples/repl.nim                      # 🌟 Standalone JavaScript REPL with full QuickJS features
 nim c -r examples/repl_with_nim_functions.nim   # 🎯 REPL with custom Nim functions exposed
 ```
 
@@ -566,16 +647,9 @@ nim c -r examples/advanced_native_bridging.nim  # Advanced native function bridg
 ```bash
 nim c -r examples/comprehensive_features.nim    # ALL features from high-level to low-level
 nim c -r examples/idiomatic_patterns.nim        # Beautiful idiomatic Nim syntax patterns
+nim c -r examples/module_example.nim            # Using ES6 modules with std/os module functionality
 nim c -r examples/type_system.nim               # Advanced type marshaling and safety
 ```
-
-**Example Descriptions:**
-- **`repl.nim`** - Standalone JavaScript REPL with full QuickJS features
-- **`repl_with_nim_functions.nim`** - 🌟 **Drop-in REPL example** showing how to expose custom Nim functions to the JavaScript REPL environment
-- **`comprehensive_features.nim`** - Complete demonstration from high-level type inference and idiomatic syntax down to low-level manual memory management
-- **`idiomatic_patterns.nim`** - Focus on beautiful Nim syntax patterns, type inference magic, and automatic memory management
-- **`type_system.nim`** - Advanced type marshaling, custom object conversion, and type safety demonstrations
-- **`module_example.nim`** - QuickJS std/os module functionality: environment access, file operations, and system information
 
 Or run all examples at once:
 ```bash
