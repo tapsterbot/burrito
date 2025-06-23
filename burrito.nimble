@@ -102,7 +102,10 @@ task test_report, "Run all tests and print a summary":
 task tr, "Alias for test_report":
   exec "nimble test_report"
 
-task r, "Run repl":
+task repl, "Run repl":
   exec "nim c -r --hints:off examples/repl_with_nim_functions.nim"
   echo ""
+
+task r, "Alias for repl":
+  exec "nimble repl --silent"
 
