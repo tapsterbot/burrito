@@ -1,0 +1,68 @@
+#!/usr/bin/expect -f
+# Test script for REPL bytecode functionality
+
+set timeout 10
+
+spawn build/bin/repl_bytecode
+
+# Expect the startup messages
+expect "Starting REPL from embedded bytecode..."
+expect "This REPL includes custom Nim functions:"
+expect "getCurrentTime(): Get current timestamp"
+expect "randomInt(max): Get random integer between 0 and max"
+
+# Wait for REPL prompt
+expect {
+    "QuickJS" {
+        puts "\n✓ REPL started successfully!"
+    }
+    timeout {
+        puts "\n✗ REPL did not start within timeout"
+        exit 1
+    }
+}
+
+# Test custom function
+send "getCurrentTime()\r"
+expect {
+    -re {"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"} {
+        puts "✓ getCurrentTime() works"
+    }
+    timeout {
+        puts "✗ getCurrentTime() failed"
+        exit 1
+    }
+}
+
+# Test another custom function
+send "randomInt(10)\r"
+expect {
+    -re {\d+} {
+        puts "✓ randomInt() works"
+    }
+    timeout {
+        puts "✗ randomInt() failed"
+        exit 1
+    }
+}
+
+# Test basic JavaScript
+send "2 + 3\r"
+expect {
+    "5" {
+        puts "✓ Basic JavaScript works"
+    }
+    timeout {
+        puts "✗ Basic JavaScript failed"
+        exit 1
+    }
+}
+
+# Wait a bit for prompt
+expect "qjs >"
+
+# Exit REPL using Ctrl+D
+send "\004"
+expect eof
+
+puts "\n✅ All REPL bytecode tests passed!"

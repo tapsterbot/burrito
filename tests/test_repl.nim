@@ -11,42 +11,91 @@ suite "REPL Tests":
     let (expectOutput, expectCode) = execCmdEx("which expect")
     if expectCode != 0:
       skip()
-    elif not fileExists("build/bin/repl"):
-      skip()
     elif not fileExists("tests/test_repl.exp"):
       skip()
     else:
-      # Run the expect test
-      let (output, exitCode) = execCmdEx("tests/test_repl.exp")
-
-      check exitCode == 0
-      check "All tests passed!" in output
-      check "REPL exited cleanly with Ctrl+D" in output
+      # Compile repl if it doesn't exist
+      if not fileExists("build/bin/repl"):
+        echo "Compiling repl for testing..."
+        let (compileOutput, compileCode) = execCmdEx("nim c --hints:off examples/repl.nim")
+        if compileCode != 0:
+          echo "Failed to compile repl: ", compileOutput
+          fail()
+        else:
+          # Run the expect test only if compilation succeeded
+          let (output, exitCode) = execCmdEx("tests/test_repl.exp")
+          check exitCode == 0
+          check "All tests passed!" in output
+          check "REPL exited cleanly with Ctrl+D" in output
+      else:
+        # Binary exists, run the expect test
+        let (output, exitCode) = execCmdEx("tests/test_repl.exp")
+        check exitCode == 0
+        check "All tests passed!" in output
+        check "REPL exited cleanly with Ctrl+D" in output
 
   test "REPL with custom functions":
     # Check if expect is available
     let (expectOutput, expectCode) = execCmdEx("which expect")
     if expectCode != 0:
       skip()
-    elif not fileExists("build/bin/repl_with_nim_functions"):
-      skip()
     else:
-      # For now, just check that the binary can start and respond
-      # (A full expect test for the custom functions would be more complex)
-      let process = startProcess("build/bin/repl_with_nim_functions")
-      sleep(500)  # Give it time to start
-
-      if process.running():
-        process.terminate()
-        process.close()
-        # If it started and was running, that's a good sign
-        check true
-      else:
-        let exitCode = process.waitForExit()
-        process.close()
-        # If it exited immediately, that might be an error
-        if exitCode != 0:
+      # Compile repl_with_nim_functions if it doesn't exist
+      if not fileExists("build/bin/repl_with_nim_functions"):
+        echo "Compiling repl_with_nim_functions for testing..."
+        let (compileOutput, compileCode) = execCmdEx("nim c --hints:off examples/repl_with_nim_functions.nim")
+        if compileCode != 0:
+          echo "Failed to compile repl_with_nim_functions: ", compileOutput
           fail()
         else:
-          # Exit code 0 might be normal if it's configured to exit immediately
+          # Test the compiled binary
+          let process = startProcess("build/bin/repl_with_nim_functions")
+          sleep(500)  # Give it time to start
+          if process.running():
+            process.terminate()
+            process.close()
+            check true
+          else:
+            let exitCode = process.waitForExit()
+            process.close()
+            check exitCode == 0
+      else:
+        # Binary exists, test it
+        let process = startProcess("build/bin/repl_with_nim_functions")
+        sleep(500)  # Give it time to start
+        if process.running():
+          process.terminate()
+          process.close()
           check true
+        else:
+          let exitCode = process.waitForExit()
+          process.close()
+          check exitCode == 0
+
+  test "REPL bytecode functionality":
+    # Check if expect is available
+    let (expectOutput, expectCode) = execCmdEx("which expect")
+    if expectCode != 0:
+      skip()
+    elif not fileExists("tests/test_repl_bytecode.exp"):
+      skip()
+    else:
+      # Compile repl_bytecode if it doesn't exist
+      if not fileExists("build/bin/repl_bytecode"):
+        echo "Compiling repl_bytecode for testing..."
+        let (compileOutput, compileCode) = execCmdEx("nim c --hints:off examples/repl_bytecode.nim")
+        if compileCode != 0:
+          echo "Failed to compile repl_bytecode: ", compileOutput
+          fail()
+        else:
+          # Run the expect test only if compilation succeeded
+          let (output, exitCode) = execCmdEx("tests/test_repl_bytecode.exp")
+          check exitCode == 0
+          check "All REPL bytecode tests passed!" in output
+          check "REPL started successfully!" in output
+      else:
+        # Binary exists, run the expect test
+        let (output, exitCode) = execCmdEx("tests/test_repl_bytecode.exp")
+        check exitCode == 0
+        check "All REPL bytecode tests passed!" in output
+        check "REPL started successfully!" in output

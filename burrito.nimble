@@ -27,6 +27,8 @@ task examples, "Run all examples":
   exec "nim c -r --hints:off examples/idiomatic_patterns.nim"
   exec "nim c -r --hints:off examples/type_system.nim"
   exec "nim c -r --hints:off examples/module_example.nim"
+  exec "nim c -r --hints:off examples/bytecode_basic.nim"
+  exec "nim c -r --hints:off examples/bytecode_comprehensive.nim"
   echo ""
 
 task es, "Alias for examples":
@@ -108,6 +110,22 @@ task repl, "Run repl":
 
 task r, "Alias for repl":
   exec "nimble repl --silent"
+
+task compile_repl_bytecode, "Compile repl.js to bytecode":
+  if not fileExists("quickjs/qjsc"):
+    echo "❌ qjsc compiler not found. Run 'nimble build_quickjs' first."
+    quit(1)
+  if not fileExists("quickjs/repl.js"):
+    echo "❌ repl.js not found in quickjs directory."
+    quit(1)
+  echo "🔨 Compiling repl.js to bytecode..."
+  exec "cd quickjs && ./qjsc -c -o repl_bytecode.c -m repl.js"
+  echo "✅ Bytecode generated in quickjs/repl_bytecode.c"
+  echo "🔨 Converting C bytecode to Nim..."
+  if not dirExists("build/src"):
+    mkDir("build/src")
+  exec "nim c -r --hints:off tools/c_bytecode_to_nim.nim quickjs/repl_bytecode.c build/src/repl_bytecode.nim"
+  echo "✅ Nim bytecode generated in build/src/repl_bytecode.nim"
 
 task docs, "Generate API documentation":
   echo "📚 Generating API documentation..."
