@@ -1021,7 +1021,7 @@ proc evalModule*(js: QuickJS, code: string, filename: string = "<module>"): stri
 
 proc compileToBytecode*(js: QuickJS, code: string, filename: string = "<input>", isModule: bool = false): seq[byte] =
   ## Compile JavaScript code to bytecode format
-  ## Returns a seq[byte] containing the compiled bytecode
+  ## Returns a `byte` value containing the compiled bytecode
   ##
   ## The bytecode can be saved and later executed with evalBytecode
   ## Note: The bytecode format is tied to the QuickJS version
