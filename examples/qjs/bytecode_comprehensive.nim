@@ -1,8 +1,8 @@
 ## Comprehensive bytecode example
 ## Shows all bytecode features: compilation, execution, isolation, and REPL
 
-import ../src/burrito
-import ../build/src/repl_bytecode
+import ../../src/burrito/qjs
+import ../../build/qjs/src/repl_bytecode
 import std/times
 
 when isMainModule:

@@ -3,7 +3,7 @@
 ## This program creates an interactive REPL similar to qjs by loading
 ## the QuickJS repl.js file and providing the necessary runtime environment.
 
-import ../src/burrito
+import ../../src/burrito/qjs
 import std/os
 
 proc main() =

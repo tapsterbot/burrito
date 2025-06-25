@@ -1,4 +1,4 @@
-import ../src/burrito
+import ../../src/burrito/qjs
 import std/[tables, strutils]
 
 # Custom Nim types for marshaling demonstration

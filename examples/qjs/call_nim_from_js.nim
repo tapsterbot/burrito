@@ -1,4 +1,4 @@
-import ../src/burrito
+import ../../src/burrito/qjs
 import std/times
 
 # Nim functions that return JSValue for native bridging
@@ -13,25 +13,32 @@ proc getMessage(ctx: ptr JSContext): JSValue =
 proc main() =
   echo "Call Nim from JavaScript Example"
   echo "================================"
-  
+
   var js = newQuickJS()
   defer: js.close()
-  
+
   # Register Nim functions using native C bridging
   js.registerFunction("getTime", getTime)
   js.registerFunction("getMessage", getMessage)
-  
+
+  # Anonymous function with a do block
+  js.registerFunction("add") do (ctx: ptr JSContext, a: JSValue, b: JSValue) -> JSValue:
+    let numA = toNimInt(ctx, a)
+    let numB = toNimInt(ctx, b)
+    return nimIntToJS(ctx, numA + numB)
+
   # Call Nim functions from JavaScript - now using native C function calls
   echo "Current time: ", js.eval("getTime()")
   echo "Message: ", js.eval("getMessage()")
-  
-  # Test with JavaScript code that calls our Nim functions
+  echo "add(1, 2): ", js.eval("add(1, 2)")
+
+  # Slightly longer example calling JS code that calls Nim
   let jsCode = """
     var time = getTime();
     var msg = getMessage();
     time + ' - ' + msg
   """
-  echo "JS result: ", js.eval(jsCode)
+  echo "\nJS result: ", js.eval(jsCode)
 
 when isMainModule:
   main()

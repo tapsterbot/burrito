@@ -8,6 +8,9 @@ build/
 quickjs/
 quickjs-*.tar.xz
 
+# Micropython source
+micropython/
+
 # Documentation
 #docs/
 

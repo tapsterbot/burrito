@@ -1,8 +1,8 @@
 # Burrito - Nim Package
 
-version       = "0.2.0"
+version       = "0.3.0"
 author        = "Jason R. Huggins"
-description   = "Burrito: Nim wrapper for QuickJS"
+description   = "Burrito: Nim wrapper for QuickJS and MicroPython"
 license       = "MIT"
 srcDir        = "src"
 
@@ -12,27 +12,40 @@ requires "nim >= 2.2.4"
 
 # Tasks
 
-task example, "Run the basic example":
-  exec "nim c -r --hints:off examples/basic_example.nim"
+task example_js, "Run the QuickJS basic example":
+  exec "nim c -r --hints:off examples/qjs/basic_example.nim"
   echo ""
 
-task e, "Alias for example":
-  exec "nimble example"
+task ejs, "Alias for QuickJS example":
+  exec "nimble example_js"
 
-task examples, "Run all examples":
-  exec "nim c -r --hints:off examples/basic_example.nim"
-  exec "nim c -r --hints:off examples/call_nim_from_js.nim"
-  exec "nim c -r --hints:off examples/advanced_native_bridging.nim"
-  exec "nim c -r --hints:off examples/comprehensive_features.nim"
-  exec "nim c -r --hints:off examples/idiomatic_patterns.nim"
-  exec "nim c -r --hints:off examples/type_system.nim"
-  exec "nim c -r --hints:off examples/module_example.nim"
-  exec "nim c -r --hints:off examples/bytecode_basic.nim"
-  exec "nim c -r --hints:off examples/bytecode_comprehensive.nim"
+task example, "Alias for QuickJS example":
+  exec "nimble example_js"
+
+task e, "Alias for QuickJS example":
+  exec "nimble example_js"
+
+task examples_js, "Run all QuickJS examples":
+  exec "nim c -r --hints:off examples/qjs/basic_example.nim"
+  exec "nim c -r --hints:off examples/qjs/call_nim_from_js.nim"
+  exec "nim c -r --hints:off examples/qjs/advanced_native_bridging.nim"
+  exec "nim c -r --hints:off examples/qjs/comprehensive_features.nim"
+  exec "nim c -r --hints:off examples/qjs/idiomatic_patterns.nim"
+  exec "nim c -r --hints:off examples/qjs/type_system.nim"
+  exec "nim c -r --hints:off examples/qjs/module_example.nim"
+  exec "nim c -r --hints:off examples/qjs/bytecode_basic.nim"
+  exec "nim c -r --hints:off examples/qjs/bytecode_comprehensive.nim"
   echo ""
 
-task es, "Alias for examples":
-  exec "nimble examples"
+task esjs, "Alias for run all QuickJS examples":
+  exec "nimble examples_js"
+
+task examples, "Alias for run all QuickJS example":
+  exec "nimble examples_js"
+
+task es, "Alias for run all QuickJS example":
+  exec "nimble examples_js"
+
 
 task get_quickjs, "Download and extract latest QuickJS source":
   if dirExists("quickjs"):
@@ -81,18 +94,19 @@ task clean_all, "Clean build artifacts":
   echo "✅ Clean completed"
 
 task test_report, "Run all tests and print a summary":
-  exec "mkdir -p ./build/logs"
+  exec "mkdir -p build/logs"
   exec "rm -f ./build/logs/nimtest.log"
-  exec "nim c --hints:off examples/repl.nim"
-  exec "nim c --hints:off examples/repl_with_nim_functions.nim"
+  if not fileExists("build/qjs/src/repl_bytecode.nim"):
+    exec "nimble compile_repl_bytecode"
   exec """
-    nim c -r --hints:off tests/test_basic.nim 2>&1 | tee -a build/logs/nimtest.log
-    nim c -r --hints:off tests/test_repl.nim 2>&1 | tee -a build/logs/nimtest.log
+    nim c -r --hints:off tests/qjs/test_basic.nim 2>&1 | tee -a build/logs/nimtest.log
+    nim c -r --hints:off tests/qjs/test_repl.nim 2>&1 | tee -a build/logs/nimtest.log
+    nim c -r --hints:off tests/mpy/test_repl.nim 2>&1 | tee -a build/logs/nimtest.log
+    echo '====================='
+    echo 'Test summary:'
     total=$(grep -E '\[(OK|FAILED)\]' build/logs/nimtest.log | wc -l)
     passed=$(grep '\[OK\]' build/logs/nimtest.log | wc -l)
     failed=$(grep '\[FAILED\]' build/logs/nimtest.log | wc -l)
-    echo '====================='
-    echo 'Test summary:'
     echo "Total tests: $total"
     echo "Passed:      $passed"
     echo "Failed:      $failed"
@@ -104,11 +118,11 @@ task test_report, "Run all tests and print a summary":
 task tr, "Alias for test_report":
   exec "nimble test_report"
 
-task repl, "Run repl":
-  exec "nim c -r --hints:off examples/repl_with_nim_functions.nim"
+task repl_js, "Run repl":
+  exec "nim c -r --hints:off examples/qjs/repl_with_nim_functions.nim"
   echo ""
 
-task r, "Alias for repl":
+task rjs, "Alias for repl":
   exec "nimble repl --silent"
 
 task compile_repl_bytecode, "Compile repl.js to bytecode":
@@ -122,14 +136,16 @@ task compile_repl_bytecode, "Compile repl.js to bytecode":
   exec "cd quickjs && ./qjsc -c -o repl_bytecode.c -m repl.js"
   echo "✅ Bytecode generated in quickjs/repl_bytecode.c"
   echo "🔨 Converting C bytecode to Nim..."
-  if not dirExists("build/src"):
-    mkDir("build/src")
-  exec "nim c -r --hints:off tools/c_bytecode_to_nim.nim quickjs/repl_bytecode.c build/src/repl_bytecode.nim"
-  echo "✅ Nim bytecode generated in build/src/repl_bytecode.nim"
+  if not dirExists("build/qjs/src"):
+    mkDir("build/qjs/src")
+  exec "nim c -r --hints:off --outdir:build/tools/bin --nimcache:build/tools/nimcache tools/c_bytecode_to_nim.nim quickjs/repl_bytecode.c build/qjs/src/repl_bytecode.nim"
+  echo "✅ Nim bytecode generated in build/qjs/src/repl_bytecode.nim"
 
 task docs, "Generate API documentation":
   echo "📚 Generating API documentation..."
   exec "nim doc --outdir:docs --git.url:https://github.com/tapsterbot/burrito --git.commit:main --git.devel:main src/burrito.nim"
+  exec "nim doc --outdir:docs --git.url:https://github.com/tapsterbot/burrito --git.commit:main --git.devel:main src/burrito/qjs.nim"
+  exec "nim doc --outdir:docs --git.url:https://github.com/tapsterbot/burrito --git.commit:main --git.devel:main src/burrito/mpy.nim"
   echo "✅ Documentation generated in docs/burrito.html"
 
 task serve_docs, "Generate API documentation":
@@ -137,3 +153,71 @@ task serve_docs, "Generate API documentation":
 
 task sd, "Alias for serve_docs":
   exec "nimble serve_docs --silent"
+
+# MicroPython tasks
+
+task get_micropython, "Download MicroPython source":
+  if dirExists("micropython"):
+    echo "⚠️  MicroPython directory already exists. To re-download, first remove it:"
+    echo "   nimble delete_micropython"
+    echo "   (or manually: rm -rf ./micropython)"
+    quit(1)
+  echo "📥 Downloading MicroPython source..."
+  exec "git clone https://github.com/micropython/micropython.git"
+  echo "✅ MicroPython source downloaded"
+
+task build_micropython, "Build MicroPython embedding library":
+  if not dirExists("micropython"):
+    echo "❌ MicroPython source not found. Run 'nimble get_micropython' first."
+    quit(1)
+  echo "🔨 Building MicroPython embedding library..."
+  exec "cd micropython/examples/embedding && make -f micropython_embed.mk"
+  echo "✅ MicroPython embedding library built successfully"
+
+# Removed: build_micropython_unix_repl task (no longer needed with embedding API)
+
+task delete_micropython, "Remove MicroPython source directory":
+  if dirExists("micropython"):
+    echo "🗑️  Removing MicroPython source directory..."
+    rmDir("micropython")
+    echo "✅ MicroPython directory removed"
+  else:
+    echo "ℹ️  No MicroPython directory found"
+
+task example_mpy,"Run the MicroPython basic example":
+  # First ensure embedding library is built
+  if not fileExists("micropython/examples/embedding/libmicropython_embed.a"):
+    echo "Building MicroPython embedding library first..."
+    exec "nimble build_micropython"
+
+  # Run the basic example
+  exec "nim c -r --hints:off examples/mpy/basic_example.nim"
+  echo ""
+
+task repl_mpy, "Run MicroPython REPL":
+  # First ensure embedding library is built
+  if not fileExists("micropython/examples/embedding/libmicropython_embed.a"):
+    echo "Building MicroPython embedding library first..."
+    exec "nimble build_micropython"
+
+  # Run the REPL
+  exec "nim c -r --hints:off examples/mpy/repl_mpy.nim"
+
+task empy, "Alias for MicroPython example":
+  exec "nimble example_mpy"
+
+task rmpy, "Alias for MicroPython REPL":
+  exec "nimble repl_mpy"
+
+task dual_engines, "Run dual engines example (JS + Python)":
+  # Build QuickJS if needed
+  if not fileExists("quickjs/libquickjs.a"):
+    echo "Building QuickJS first..."
+    exec "nimble build_quickjs"
+
+  # Build MicroPython embedding library if needed
+  if not fileExists("micropython/examples/embedding/libmicropython_embed.a"):
+    echo "Building MicroPython embedding library first..."
+    exec "nimble build_micropython"
+
+  exec "nim c -r --hints:off examples/multi/dual_engines.nim"

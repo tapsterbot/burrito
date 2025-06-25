@@ -1,4 +1,4 @@
-import ../src/burrito
+import ../../src/burrito/qjs
 import std/times
 
 # Example functions demonstrating different argument patterns

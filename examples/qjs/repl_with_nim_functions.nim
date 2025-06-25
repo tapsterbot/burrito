@@ -5,7 +5,7 @@
 ##
 ## Perfect for creating developer tools, debugging interfaces, or interactive applications.
 
-import ../src/burrito
+import ../../src/burrito/qjs
 import std/[os, times, unicode]
 
 proc main() =

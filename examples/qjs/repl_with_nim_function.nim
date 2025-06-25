@@ -1,4 +1,4 @@
-import ../src/burrito
+import ../../src/burrito/qjs
 
 proc main() =
   # Create QuickJS instance with full REPL support

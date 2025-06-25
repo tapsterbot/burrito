@@ -1,5 +1,5 @@
 import unittest
-import ../src/burrito
+import ../../src/burrito/qjs
 
 suite "Basic Burrito Example":
   test "Full usage example":

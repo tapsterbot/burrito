@@ -1,7 +1,7 @@
 ## Basic bytecode example
 ## Shows fundamental bytecode compilation and execution
 
-import ../src/burrito
+import ../../src/burrito/qjs
 
 when isMainModule:
   echo "=== Basic Bytecode Example ==="

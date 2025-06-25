@@ -1,0 +1,55 @@
+#!/usr/bin/expect -f
+
+# Test script for Burrito MicroPython REPL (embedding mode)
+set timeout 5
+
+spawn ./build/mpy/bin/repl_mpy
+
+# Wait for the startup messages
+expect "🌯 Burrito - MicroPython wrapper"
+expect "MicroPython REPL (embedding mode)"
+expect "Use Ctrl+D to exit"
+
+# Wait for the prompt
+expect ">>> "
+
+# Test simple arithmetic with print
+send "print(1 + 1)\r"
+expect "2"
+expect ">>> "
+
+# Test simple string operation with print
+send "print('Hello ' + 'World')\r"
+expect "Hello World"
+expect ">>> "
+
+# Test simple built-in function
+send "print(len('hello'))\r"
+expect "5"
+expect ">>> "
+
+# Test simple expression
+send "print(2 ** 3)\r"
+expect "8"
+expect ">>> "
+
+# Test variable assignment and usage (single line)
+send "x = 42; print(x)\r"
+expect "42"
+expect ">>> "
+
+# Exit using Ctrl+D
+send "\004"
+
+# Expect either a clean exit or timeout (but not hanging)
+expect {
+    eof {
+        puts "\nREPL exited cleanly with Ctrl+D"
+    }
+    timeout {
+        puts "\nERROR: REPL did not exit with Ctrl+D"
+        exit 1
+    }
+}
+
+puts "All tests passed!"

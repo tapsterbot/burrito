@@ -9,7 +9,7 @@
 ## QuickJS supports ES6 modules with import/export syntax,
 ## allowing you to use modern JavaScript module patterns.
 
-import ../src/burrito
+import ../../src/burrito/qjs
 
 proc basicModuleImport() =
   echo "=== Basic ES6 Module Import (std) ==="

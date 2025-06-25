@@ -3,7 +3,7 @@
 # Test script for Burrito REPL
 set timeout 5
 
-spawn ./build/bin/repl
+spawn ./build/qjs/bin/repl_qjs
 
 # Wait for the prompt
 expect "qjs > "

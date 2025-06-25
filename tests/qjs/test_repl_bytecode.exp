@@ -3,7 +3,7 @@
 
 set timeout 10
 
-spawn build/bin/repl_bytecode
+spawn build/qjs/bin/repl_bytecode
 
 # Expect the startup messages
 expect "Starting REPL from embedded bytecode..."
