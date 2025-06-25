@@ -118,11 +118,11 @@ task test_report, "Run all tests and print a summary":
 task tr, "Alias for test_report":
   exec "nimble test_report"
 
-task repl_js, "Run repl":
+task repl_js, "Run QuickJS repl":
   exec "nim c -r --hints:off examples/qjs/repl_with_nim_functions.nim"
   echo ""
 
-task rjs, "Alias for repl":
+task rjs, "Alias for QuickJS repl":
   exec "nimble repl --silent"
 
 task compile_repl_bytecode, "Compile repl.js to bytecode":
@@ -221,3 +221,25 @@ task dual_engines, "Run dual engines example (JS + Python)":
     exec "nimble build_micropython"
 
   exec "nim c -r --hints:off examples/multi/dual_engines.nim"
+
+task repl_nim, "Run INim REPL":
+  let pwd = getCurrentDir()
+  let cmd = """
+    inim \
+        -d:--path:src \
+        -d:"--cincludes:\"$(pwd)/micropython/examples/embedding/micropython_embed\"" \
+        -d:"--cincludes:\"$(pwd)/micropython/examples/embedding/micropython_embed/port\"" \
+        -d:"--cincludes:\"$(pwd)/micropython/examples/embedding\"" \
+        -d:"--passL:\"$(pwd)/micropython/examples/embedding/libmicropython_embed.a\"" \
+        -d:"--passL:-lm"
+  """
+  exec cmd
+
+task rnim, "Alias for Run INim REPL":
+  exec "nimble repl_nim --silent"
+
+task inim, "Alias for Run INim REPL":
+  exec "nimble repl_nim --silent"
+
+task i, "Alias for Run INim REPL":
+  exec "nimble repl_nim --silent"
