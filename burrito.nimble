@@ -9,6 +9,7 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 2.2.4"
+requires "noise"
 
 # Tasks
 
@@ -65,6 +66,13 @@ task build_quickjs, "Build the QuickJS library":
   echo "🔨 Building QuickJS library..."
   exec "cd quickjs && make"
   echo "✅ QuickJS library built successfully"
+
+  # Auto-compile REPL bytecode if needed
+  if not fileExists("build/qjs/src/repl_bytecode.nim"):
+    echo "🔨 Compiling REPL bytecode..."
+    exec "nimble compile_repl_bytecode"
+  else:
+    echo "ℹ️  REPL bytecode already exists"
 
 task delete_quickjs, "Remove QuickJS source directory":
   if dirExists("quickjs"):
@@ -194,13 +202,13 @@ task example_mpy,"Run the MicroPython basic example":
   exec "nim c -r --hints:off examples/mpy/basic_example.nim"
   echo ""
 
-task repl_mpy, "Run MicroPython REPL":
+task repl_mpy, "Run MicroPython REPL with readline support":
   # First ensure embedding library is built
   if not fileExists("micropython/examples/embedding/libmicropython_embed.a"):
     echo "Building MicroPython embedding library first..."
     exec "nimble build_micropython"
 
-  # Run the REPL
+  # Run the enhanced REPL
   exec "nim c -r --hints:off examples/mpy/repl_mpy.nim"
 
 task empy, "Alias for MicroPython example":

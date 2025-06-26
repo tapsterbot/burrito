@@ -10,12 +10,9 @@ proc main() =
   var py = newMicroPython(heapSize = 256 * 1024)  # 256KB heap
   defer: py.close()
 
-  # Display welcome message
-  echo "🌯 Burrito - MicroPython wrapper"
-  
-  # Start the interactive REPL
-  # This will handle everything including the banner, prompts, and Ctrl+D to exit
-  py.startRepl()
+  # Start the interactive REPL with readline support
+  # Features: command history, line editing, tab completion
+  py.startReplWithReadline()
 
 when isMainModule:
   main()

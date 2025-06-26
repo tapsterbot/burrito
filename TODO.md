@@ -5,11 +5,6 @@ This document tracks cleanup items and future enhancements for the Burrito proje
 ## Next Release (v0.3.1) - Priority 1
 
 ### Documentation
-- [ ] **Update CHANGELOG.md**
-  - Document v0.2.0 milestone: MicroPython integration
-  - List breaking changes: file reorganization
-  - New features: unified imports, dual engine support
-
 - [ ] **README.md improvements**
   - Add MicroPython quick start section
   - Update file paths in examples
@@ -63,6 +58,7 @@ This document tracks cleanup items and future enhancements for the Burrito proje
   - Lua integration
   - Duktape (JS) integration
   - Janet integration
+  - PicoRuby?
 
 ### Developer Experience
 - [ ] **IDE integration**

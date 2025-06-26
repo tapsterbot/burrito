@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            Getting Started with Burrito - QuickJS & MicroPython Nim Wrapper
+        </title>
+        <style>
+            :root {
+                --primary: #ff6b35;
+                --primary-dark: #e85a2a;
+                --secondary: #8b5fbf;
+                --dark: #2c3e50;
+                --text: #34495e;
+                --light-bg: #f8f9fa;
+                --white: #ffffff;
+                --shadow:
+                    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                --shadow-lg:
+                    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+
+            [data-theme="dark"] {
+                --primary: #ff7f50;
+                --primary-dark: #ff6b35;
+                --secondary: #9d71d9;
+                --dark: #1a1a1a;
+                --text: #e0e0e0;
+                --light-bg: #2d2d2d;
+                --white: #1a1a1a;
+                --shadow:
+                    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+                --shadow-lg:
+                    0 10px 15px -3px rgba(0, 0, 0, 0.3),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                color: var(--text);
+                background: var(--white);
+            }
+
+            .header {
+                background: linear-gradient(
+                    135deg,
+                    #ff6b35 0%,
+                    #ff4e88 50%,
+                    #8b5fbf 100%
+                );
+                color: #ffffff;
+                padding: 3rem 0;
+                text-align: center;
+            }
+
+            [data-theme="dark"] .header {
+                background: linear-gradient(
+                    135deg,
+                    #ff7f50 0%,
+                    #ff5a92 50%,
+                    #9d71d9 100%
+                );
+            }
+
+            .header h1 {
+                font-size: 4rem;
+                font-weight: 800;
+                margin-bottom: 0.5rem;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .header p {
+                font-size: 1.5rem;
+                opacity: 0.95;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .container {
+                max-width: 1000px;
+                margin: 0 auto;
+                padding: 0 2rem;
+            }
+
+            .content {
+                padding: 3rem 0;
+            }
+
+            .nav-link {
+                display: inline-block;
+                margin: 1rem 0;
+                padding: 0.5rem 1rem;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                text-decoration: none;
+                border-radius: 6px;
+                transition: all 0.3s ease;
+            }
+
+            .nav-link:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: translateY(-2px);
+            }
+
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
+                color: var(--dark);
+                margin: 2rem 0 1rem 0;
+            }
+
+            [data-theme="dark"] h1,
+            [data-theme="dark"] h2,
+            [data-theme="dark"] h3,
+            [data-theme="dark"] h4,
+            [data-theme="dark"] h5,
+            [data-theme="dark"] h6 {
+                color: var(--text);
+            }
+
+            h2 {
+                font-size: 2.5rem;
+                background: linear-gradient(
+                    135deg,
+                    #ff6b35 0%,
+                    #ff4e88 50%,
+                    #8b5fbf 100%
+                );
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                margin-top: 3rem;
+            }
+
+            [data-theme="dark"] h2 {
+                background: linear-gradient(
+                    135deg,
+                    #ff7f50 0%,
+                    #ff5a92 50%,
+                    #9d71d9 100%
+                );
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+            }
+
+            h3 {
+                font-size: 1.8rem;
+                color: var(--primary);
+                margin-top: 2rem;
+            }
+
+            [data-theme="dark"] h3 {
+                color: var(--primary);
+            }
+
+            h4 {
+                font-size: 1.3rem;
+                color: var(--secondary);
+                margin-top: 1.5rem;
+            }
+
+            [data-theme="dark"] h4 {
+                color: var(--secondary);
+            }
+
+            p {
+                margin: 1rem 0;
+                font-size: 1.1rem;
+                line-height: 1.7;
+            }
+
+            ul,
+            ol {
+                margin: 1rem 0;
+                padding-left: 2rem;
+            }
+
+            li {
+                margin: 0.5rem 0;
+                font-size: 1.1rem;
+                line-height: 1.6;
+            }
+
+            strong {
+                color: var(--primary);
+                font-weight: 600;
+            }
+
+            [data-theme="dark"] strong {
+                color: var(--primary);
+            }
+
+            .code-example {
+                background: var(--dark);
+                color: #e7e9db;
+                padding: 2rem;
+                border-radius: 12px;
+                overflow-x: auto;
+                box-shadow: var(--shadow-lg);
+                margin: 2rem 0;
+                position: relative;
+            }
+
+            [data-theme="dark"] .code-example {
+                background: #1a1a1a;
+                border: 1px solid #333;
+            }
+
+            .copy-button {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #e7e9db;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: all 0.2s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            .copy-button:hover {
+                background: rgba(255, 255, 255, 0.2);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+
+            .code-example pre {
+                margin: 0;
+                font-family: "Consolas", "Monaco", "Courier New", monospace;
+                font-size: 0.95rem;
+            }
+
+            .code-example .comment {
+                color: #95a99c;
+            }
+
+            .code-example .keyword {
+                color: #ff6b35;
+            }
+
+            [data-theme="dark"] .code-example .keyword {
+                color: #ff7f50;
+            }
+
+            .code-example .string {
+                color: #8b5fbf;
+            }
+
+            [data-theme="dark"] .code-example .string {
+                color: #9d71d9;
+            }
+
+            .code-example .function {
+                color: #ffe66d;
+            }
+
+            blockquote {
+                border-left: 4px solid var(--primary);
+                padding-left: 1.5rem;
+                margin: 2rem 0;
+                font-style: italic;
+                background: var(--light-bg);
+                padding: 1rem 1.5rem;
+                border-radius: 0 8px 8px 0;
+            }
+
+            [data-theme="dark"] blockquote {
+                background: var(--light-bg);
+                border-left-color: var(--primary);
+            }
+
+            a {
+                color: var(--primary);
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .feature-highlight {
+                background: var(--light-bg);
+                padding: 2rem;
+                border-radius: 12px;
+                margin: 2rem 0;
+                border-left: 4px solid var(--primary);
+            }
+
+            [data-theme="dark"] .feature-highlight {
+                background: var(--light-bg);
+            }
+
+            .theme-toggle {
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+                z-index: 1000;
+                opacity: 0.7;
+            }
+
+            .theme-toggle:hover {
+                transform: scale(1.05);
+                background: rgba(255, 255, 255, 0.25);
+                opacity: 1;
+            }
+
+            [data-theme="dark"] .theme-toggle {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.15);
+            }
+
+            [data-theme="dark"] body {
+                background: #1a1a1a;
+                color: #e0e0e0;
+            }
+
+            footer {
+                background: var(--dark);
+                color: var(--white);
+                padding: 3rem 0;
+                text-align: center;
+                margin-top: 4rem;
+            }
+
+            [data-theme="dark"] footer {
+                color: #e0e0e0;
+            }
+
+            footer a {
+                color: #ffb366;
+                text-decoration: none;
+            }
+
+            [data-theme="dark"] footer a {
+                color: #ffc080;
+            }
+
+            footer a:hover {
+                text-decoration: underline;
+            }
+
+            @media (max-width: 768px) {
+                .header h1 {
+                    font-size: 3rem;
+                }
+
+                .header p {
+                    font-size: 1.2rem;
+                }
+
+                h2 {
+                    font-size: 2rem;
+                }
+
+                .container {
+                    padding: 0 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <button
+            class="theme-toggle"
+            onclick="toggleTheme()"
+            aria-label="Toggle theme"
+        >
+            <span id="theme-icon">☀️</span>
+        </button>
+
+        <div class="header">
+            <div class="container">
+                <h1>🌯 Getting Started with Burrito</h1>
+                <p>
+                    Your guide to embedding JavaScript and Python in Nim
+                    applications
+                </p>
+                <a href="index.html" class="nav-link">← Back to Main</a>
+                <a href="burrito.html" class="nav-link">API Documentation</a>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="content">
+                <h2>What is Burrito?</h2>
+                <p>
+                    Burrito is a Nim library that makes it incredibly easy to
+                    embed JavaScript (via QuickJS) and Python (via MicroPython)
+                    into your native applications. Think of it as a bridge
+                    between the performance of native code and the flexibility
+                    of scripting languages.
+                </p>
+
+                <h2>Why Nim for Native Apps?</h2>
+                <p>
+                    If you're coming from JavaScript or Python, you might
+                    wonder: "Why learn another language?" You've probably never
+                    heard of Nim - and that's exactly why it's such a hidden
+                    gem!
+                </p>
+
+                <p>
+                    <strong
+                        >Nim is a modern systems programming language</strong
+                    >
+                    that combines performance and expressiveness, influenced by
+                    academic ideas but developed independently. While languages
+                    like Go, Rust, and Zig get more attention, Nim has been
+                    steadily solving real-world problems since 2008. It's the
+                    secret weapon used by companies building everything from
+                    game engines to financial trading systems.
+                </p>
+
+                <p>Here's why Nim is special:</p>
+
+                <h3>🚀 <strong>Speed of C, Syntax Like Python</strong></h3>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment"># Nim code looks familiar if you know Python</span>
+<span class="keyword">proc</span> <span class="function">calculateDistance</span>(x1, y1, x2, y2: <span class="keyword">float</span>): <span class="keyword">float</span> =
+  <span class="keyword">let</span> dx = x2 - x1
+  <span class="keyword">let</span> dy = y2 - y1
+  <span class="keyword">return</span> <span class="function">sqrt</span>(dx*dx + dy*dy)</pre>
+                </div>
+                <p>
+                    <strong>But here's the magic</strong>: This readable,
+                    Python-like code compiles directly to optimized C and runs
+                    at native speed! No virtual machine, no interpreter overhead
+                    - just blazing fast machine code.
+                </p>
+
+                <h3>📦 <strong>Deploy Anywhere, No Dependencies</strong></h3>
+                <ul>
+                    <li>
+                        <strong>Single binary</strong>: Your entire app compiles
+                        to one executable file
+                    </li>
+                    <li>
+                        <strong>No runtime required</strong>: Users don't need
+                        to install Node.js, Python, or JVM
+                    </li>
+                    <li>
+                        <strong>Cross-platform</strong>: Same code runs on
+                        Windows, macOS, Linux, and embedded systems
+                    </li>
+                    <li>
+                        <strong>Tiny footprint</strong>: Minimal binary size
+                        compared to other compiled languages
+                    </li>
+                </ul>
+
+                <h3>🔗 <strong>Seamless C Integration</strong></h3>
+                <ul>
+                    <li>
+                        <strong>Zero-friction FFI</strong>: Call C libraries
+                        directly without binding generators
+                    </li>
+                    <li>
+                        <strong>Existing ecosystem</strong>: Leverage decades of
+                        C libraries instantly
+                    </li>
+                    <li>
+                        <strong>Hardware access</strong>: Perfect for IoT,
+                        robotics, and system programming
+                    </li>
+                    <li>
+                        <strong>Legacy integration</strong>: Wrap existing C/C++
+                        codebases effortlessly
+                    </li>
+                </ul>
+
+                <h3>🛡️ <strong>Safe and Predictable</strong></h3>
+                <ul>
+                    <li>
+                        <strong>Memory safety</strong>: Automatic memory
+                        management without garbage collection pauses
+                    </li>
+                    <li>
+                        <strong>Zero-cost abstractions</strong>: High-level
+                        features with no runtime overhead
+                    </li>
+                    <li>
+                        <strong>Deterministic performance</strong>: Perfect for
+                        real-time applications and games
+                    </li>
+                    <li>
+                        <strong>Safe by default</strong>: Catch errors at
+                        compile time, not runtime
+                    </li>
+                </ul>
+
+                <h3>⚡ <strong>What Makes Nim Extraordinary</strong></h3>
+                <ul>
+                    <li>
+                        <strong>Metaprogramming</strong>: Powerful macros that
+                        generate code at compile time
+                    </li>
+                    <li>
+                        <strong>Multiple paradigms</strong>: Object-oriented,
+                        functional, procedural - pick your style
+                    </li>
+                    <li>
+                        <strong>Incremental adoption</strong>: Start with small
+                        modules, gradually replace performance bottlenecks
+                    </li>
+                    <li>
+                        <strong>Developer happiness</strong>: Expressive syntax
+                        that makes complex code readable
+                    </li>
+                </ul>
+
+                <h2>Why Embed Scripting?</h2>
+                <p>
+                    You might think: "If Nim is so great, why not write
+                    everything in Nim?" Here's why embedded scripting is
+                    powerful:
+                </p>
+
+                <ul>
+                    <li>
+                        <strong>🤖 Robotics</strong>: Fast hardware control in
+                        Nim, interactive testing in Python
+                    </li>
+                    <li>
+                        <strong>🎮 Games</strong>: High-performance engine in
+                        Nim, user mods in JavaScript
+                    </li>
+                    <li>
+                        <strong>🌐 Web Services</strong>: Efficient HTTP in Nim,
+                        flexible business rules in JavaScript
+                    </li>
+                </ul>
+
+                <p>
+                    <strong>The pattern</strong>: Performance-critical code in
+                    Nim, flexible logic in scripts.
+                </p>
+
+                <h2>Your First Burrito App</h2>
+                <p>
+                    Let's build something together! We'll create a simple
+                    calculator where the core math is in Nim (fast) and user
+                    formulas can be in JavaScript or Python (flexible).
+                </p>
+
+                <h3>Step 1: Installation</h3>
+                <p>First, make sure you have Nim installed:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment"># Install Nim (if you haven't already)</span>
+<span class="function">curl</span> https://nim-lang.org/choosenim/init.sh -sSf | sh
+
+<span class="comment"># Clone Burrito</span>
+<span class="function">git</span> clone https://github.com/tapsterbot/burrito.git
+<span class="function">cd</span> burrito
+
+<span class="comment"># Setup dependencies</span>
+<span class="function">nimble</span> get_quickjs
+<span class="function">nimble</span> build_quickjs
+<span class="function">nimble</span> get_micropython
+<span class="function">nimble</span> build_micropython</pre>
+                </div>
+
+                <h3>Step 2: Your First JavaScript Integration</h3>
+                <p>Create <code>my_calculator.nim</code>:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="keyword">import</span> burrito/qjs
+
+<span class="comment"># Native Nim function - compiled, fast</span>
+<span class="keyword">proc</span> <span class="function">factorial</span>(n: <span class="keyword">int</span>): <span class="keyword">int</span> =
+  <span class="keyword">if</span> n <= 1: 1
+  <span class="keyword">else</span>: n * <span class="function">factorial</span>(n - 1)
+
+<span class="comment"># Create JavaScript engine</span>
+<span class="keyword">var</span> js = <span class="function">newQuickJS</span>()
+<span class="keyword">defer</span>: js.<span class="function">close</span>()
+
+<span class="comment"># Register our Nim function with JavaScript</span>
+<span class="keyword">proc</span> <span class="function">jsFactorial</span>(ctx: <span class="keyword">ptr</span> JSContext, n: JSValue): JSValue =
+  <span class="keyword">let</span> nimN = <span class="function">toNimInt</span>(ctx, n)
+  <span class="keyword">let</span> result = <span class="function">factorial</span>(nimN)
+  <span class="keyword">return</span> <span class="function">nimIntToJS</span>(ctx, result)
+
+js.<span class="function">registerFunction</span>(<span class="string">"factorial"</span>, jsFactorial)
+
+<span class="comment"># Now JavaScript can call our fast Nim code!</span>
+<span class="function">echo</span> js.<span class="function">eval</span>(<span class="string">"factorial(10)"</span>)  <span class="comment"># Output: 3628800</span>
+<span class="function">echo</span> js.<span class="function">eval</span>(<span class="string">"'Factorial of 5 is: ' + factorial(5)"</span>)  <span class="comment"># Output: Factorial of 5 is: 120</span></pre>
+                </div>
+
+                <p>Run it:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="function">nim</span> r my_calculator.nim</pre>
+                </div>
+
+                <h3>Step 3: Add Python Support</h3>
+                <p>Add to your <code>my_calculator.nim</code>:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="keyword">import</span> burrito/mpy
+
+<span class="comment"># Create Python engine</span>
+<span class="keyword">var</span> py = <span class="function">newMicroPython</span>()
+<span class="keyword">defer</span>: py.<span class="function">close</span>()
+
+<span class="comment"># Python can do flexible string formatting</span>
+<span class="function">echo</span> py.<span class="function">eval</span>(<span class="string">"""
+result = 42 * 37
+print(f'The answer is {result}')
+"""</span>)
+
+<span class="comment"># Let's do some data analysis</span>
+<span class="function">echo</span> py.<span class="function">eval</span>(<span class="string">"""
+data = [1, 2, 3, 4, 5, 10, 100]
+average = sum(data) / len(data)
+print(f'Average: {average:.2f}')
+print(f'Max: {max(data)}')
+print(f'Min: {min(data)}')
+"""</span>)</pre>
+                </div>
+
+                <h3>Step 4: Interactive REPL</h3>
+                <p>Want to experiment? Burrito includes interactive REPLs:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment"># JavaScript REPL with your Nim functions</span>
+<span class="function">nimble</span> repl_js
+
+<span class="comment"># Python REPL</span>
+<span class="function">nimble</span> repl_mpy
+
+<span class="comment"># Both engines together</span>
+<span class="function">nimble</span> dual_engines</pre>
+                </div>
+
+                <p>Try this in the JavaScript REPL:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre>
+>>> 2 + 3
+5
+>>> "Hello " + "Burrito!"
+Hello Burrito!
+>>> Math.sqrt(16)
+4</pre
+                    >
+                </div>
+
+                <p>And in the Python REPL:</p>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre>
+>>> print("Hello from Python!")
+Hello from Python!
+>>> [x*2 for x in range(5)]
+[0, 2, 4, 6, 8]
+>>> len("Burrito")
+7</pre
+                    >
+                </div>
+
+                <h3>Step 5: Building Something Real - Valet Network Nodes</h3>
+                <p>
+                    At <a href="https://tapster.io/">Tapster</a>, we're building the Valet Network in Nim and
+                    using Burrito to
+                    <strong>experiment and prototype with <a href="https://nostr.com/">Nostr</a></strong> for our
+                    nodes. This shows how Burrito helps with:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Valet Studio</strong> - Desktop app for node
+                        management
+                    </li>
+                    <li>
+                        <strong>Valet Hardware (<a href="https://tapster.io/valet-link-by-tapster-robotics-specifications-and-features">Valet Link</a>)</strong> - Raspberry
+                        Pi nodes
+                    </li>
+                </ul>
+
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment"># Fast Nostr relay communication in Nim</span>
+<span class="keyword">proc</span> <span class="function">connectToNostr</span>*(relay: <span class="keyword">string</span>): WebSocket =
+  result = <span class="function">newWebSocket</span>(relay)
+
+<span class="keyword">proc</span> <span class="function">publishEvent</span>*(ws: WebSocket, event: NostrEvent) =
+  <span class="comment"># Fast JSON serialization and WebSocket send</span>
+  ws.<span class="function">send</span>(event.<span class="function">toJson</span>())
+
+<span class="keyword">proc</span> <span class="function">parseJobFromNostr</span>*(event: NostrEvent): TestJob =
+  <span class="comment"># Efficient parsing of test job from Nostr event</span>
+  result = <span class="function">parseJson</span>(event.content).<span class="function">to</span>(TestJob)
+
+<span class="comment"># Expose to JavaScript via Burrito</span></pre>
+                </div>
+
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment">// Node behavior - hot-swappable without restarting!</span>
+<span class="keyword">function</span> <span class="function">handleTestJob</span>(job) {  <span class="comment">// job from Nim Nostr parsing</span>
+  <span class="comment">// Connect to test target</span>
+  driver.<span class="function">get</span>(job.website);
+
+  <span class="comment">// Run the test</span>
+  <span class="keyword">const</span> screenshot = <span class="function">takeScreenshot</span>();  <span class="comment">// Fast Nim capture</span>
+  <span class="keyword">const</span> isUp = driver.<span class="function">getTitle</span>() && !screenshot.<span class="function">contains</span>(<span class="string">"Error"</span>);
+
+  <span class="comment">// Report results back to Nostr</span>
+  <span class="function">publishEvent</span>(<span class="function">createResultEvent</span>({
+    jobId: job.id,
+    status: isUp ? <span class="string">"success"</span> : <span class="string">"failed"</span>,
+    screenshot: screenshot,
+    nodeLocation: <span class="string">"raspberry-pi-home"</span>
+  }));
+}
+
+<span class="comment">// Prototype new node behaviors without recompiling!</span></pre>
+                </div>
+
+                <div class="feature-highlight">
+                    <h4>Why This Works for Valet Network:</h4>
+                    <ul>
+                        <li>
+                            <strong>⚡ Fast <a href="https://nostr.com/">Nostr</a></strong>: WebSocket handling
+                            and JSON parsing in compiled Nim
+                        </li>
+                        <li>
+                            <strong>🔧 Flexible Logic</strong>: Test execution
+                            and node behavior in hot-swappable JavaScript
+                        </li>
+                        <li>
+                            <strong>🎯 Rapid Prototyping</strong>: Experiment
+                            with <a href="https://nostr.com/">Nostr</a> protocols without rebuilding the entire
+                            node
+                        </li>
+                    </ul>
+                </div>
+
+                <h2>What Makes This Powerful?</h2>
+
+                <h3>🎯 <strong>Best of Both Worlds</strong></h3>
+                <ul>
+                    <li>
+                        <strong>Nim</strong>: Fast file I/O, memory management,
+                        system calls
+                    </li>
+                    <li>
+                        <strong>Scripts</strong>: Flexible logic, easy to
+                        modify, user-customizable
+                    </li>
+                </ul>
+
+                <h3>🔄 <strong>Rapid Iteration</strong></h3>
+                <ul>
+                    <li>Change script behavior without recompiling</li>
+                    <li>Test new ideas in the REPL</li>
+                    <li>Hot-reload configuration</li>
+                </ul>
+
+                <h3>👥 <strong>User Empowerment</strong></h3>
+                <ul>
+                    <li>Users can extend your app without C/Nim knowledge</li>
+                    <li>Safe sandbox - scripts can't crash your native code</li>
+                    <li>
+                        Familiar languages (JS/Python) for widespread adoption
+                    </li>
+                </ul>
+
+                <h3>🚀 <strong>Performance Where It Matters</strong></h3>
+                <ul>
+                    <li>
+                        Critical paths in compiled Nim (memory management, I/O,
+                        algorithms)
+                    </li>
+                    <li>
+                        Flexible paths in scripts (business logic, UI,
+                        configuration)
+                    </li>
+                </ul>
+
+                <h2>Next Steps</h2>
+                <p>Ready to dive deeper? Here's what to explore next:</p>
+
+                <h3>📚 <strong>Learn More</strong></h3>
+                <ul>
+                    <li>
+                        <a href="burrito.html">API Documentation</a> - Complete
+                        function reference
+                    </li>
+                    <li>
+                        <a
+                            href="https://github.com/tapsterbot/burrito/tree/main/examples/qjs"
+                            >QuickJS Examples</a
+                        >
+                        - JavaScript integration patterns
+                    </li>
+                    <li>
+                        <a
+                            href="https://github.com/tapsterbot/burrito/tree/main/examples/mpy"
+                            >MicroPython Examples</a
+                        >
+                        - Python integration patterns
+                    </li>
+                </ul>
+
+                <h3>🛠 <strong>Try More Examples</strong></h3>
+                <div class="code-example">
+                    <button class="copy-button" onclick="copyCode(this)">
+                        Copy
+                    </button>
+                    <pre><span class="comment"># Run QuickJS examples</span>
+<span class="function">nimble</span> example
+
+<span class="comment"># Try MicroPython</span>
+<span class="function">nimble</span> example_mpy
+
+<span class="comment"># Experiment with both engines</span>
+<span class="function">nimble</span> dual_engines</pre>
+                </div>
+
+                <h3>🌟 <strong>Join the Community</strong></h3>
+                <ul>
+                    <li>
+                        <a href="https://github.com/tapsterbot/burrito"
+                            >GitHub Repository</a
+                        >
+                        - Source code and issues
+                    </li>
+                    <li>Share your use cases and get help</li>
+                    <li>Contribute examples and improvements</li>
+                </ul>
+
+                <h3>💡 <strong>Build Something Amazing</strong></h3>
+                <p>
+                    Now that you understand the power of native + scripting,
+                    what will you create?
+                </p>
+
+                <ul>
+                    <li><strong>Game with modding support?</strong></li>
+                    <li>
+                        <strong
+                            >Data processing pipeline with user scripts?</strong
+                        >
+                    </li>
+                    <li>
+                        <strong>IoT device with scriptable behavior?</strong>
+                    </li>
+                    <li><strong>Desktop app with plugin system?</strong></li>
+                </ul>
+
+                <p>
+                    The combination of Nim's performance and JavaScript/Python's
+                    flexibility opens up endless possibilities. Welcome to the
+                    Burrito community - we can't wait to see what you build!
+                    🌯✨
+                </p>
+
+                <hr />
+
+                <p>
+                    <em
+                        >Questions? Found a bug? Want to contribute? Visit our
+                        <a href="https://github.com/tapsterbot/burrito"
+                            >GitHub repository</a
+                        >
+                        or check out the
+                        <a href="burrito.html">API documentation</a>.</em
+                    >
+                </p>
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>
+                    <strong>Burrito</strong> - QuickJS & MicroPython wrapper for
+                    Nim<br />
+                    <a href="burrito.html">API Docs</a> •
+                    <a href="https://github.com/tapsterbot/burrito">GitHub</a> •
+                    <a href="index.html">Home</a>
+                </p>
+                <p style="font-size: 0.8rem; margin-top: 1rem; opacity: 0.7">
+                    made with
+                    <a href="https://bsky.app/profile/hugs.bsky.social">hugs</a>
+                    and robots
+                </p>
+            </div>
+        </footer>
+
+        <script>
+            // Theme handling
+            function getTheme() {
+                return localStorage.getItem("theme") || "dark";
+            }
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute("data-theme", theme);
+                localStorage.setItem("theme", theme);
+                document.getElementById("theme-icon").textContent =
+                    theme === "dark" ? "☀️" : "🌙";
+            }
+
+            function toggleTheme() {
+                const currentTheme = getTheme();
+                setTheme(currentTheme === "dark" ? "light" : "dark");
+            }
+
+            // Initialize theme on load
+            setTheme(getTheme());
+
+            // Copy code functionality
+            function copyCode(button) {
+                const codeBlock = button.nextElementSibling;
+                const code = codeBlock.textContent;
+
+                navigator.clipboard
+                    .writeText(code)
+                    .then(function () {
+                        button.textContent = "Copied!";
+                        setTimeout(function () {
+                            button.textContent = "Copy";
+                        }, 2000);
+                    })
+                    .catch(function () {
+                        button.textContent = "Failed";
+                        setTimeout(function () {
+                            button.textContent = "Copy";
+                        }, 2000);
+                    });
+            }
+        </script>
+    </body>
+</html>

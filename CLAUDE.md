@@ -110,6 +110,7 @@ nimble get_micropython     # Download MicroPython source
 nimble build_micropython   # Build MicroPython embedding library
 nimble delete_micropython  # Remove MicroPython source
 nimble example_mpy         # Run basic MicroPython example
+nimble repl_mpy            # Interactive REPL with readline support
 nimble empy                # Alias for example_mpy
 
 # Multi-engine examples
@@ -132,42 +133,49 @@ nimble serve_docs     # Serve docs locally at http://localhost:8000
 - `nim.cfg` - Build configuration (outputs to build/bin/)
 - `docs/index.html` - Modern landing page with sunset gradient theme
 - `docs/burrito.html` - Generated API documentation
+- `docs/mpy/MICROPYTHON.md` - Detailed MicroPython integration documentation
+- `docs/mpy/micropython_rom_levels_analysis.md` - ROM level configuration analysis
+- `docs/qjs.html` - QuickJS module API documentation
+- `docs/mpy.html` - MicroPython module API documentation
+- `docs/mpy/MICROPYTHON.md` - Detailed MicroPython integration notes
+- `docs/mpy/micropython_rom_levels_analysis.md` - ROM level configuration analysis
 
-### QuickJS Examples
-- `examples/qjs/basic_example.nim` - Simple JavaScript evaluation
-- `examples/qjs/call_nim_from_js.nim` - Exposing Nim functions to JavaScript
-- `examples/qjs/bytecode_basic.nim` - Basic bytecode compilation and execution
-- `examples/qjs/bytecode_comprehensive.nim` - Complete bytecode feature showcase
-- `examples/qjs/repl_qjs.nim` - Standalone REPL implementation
-- `examples/qjs/repl_with_nim_function.nim` - REPL with one custom function (simple)
-- `examples/qjs/repl_with_nim_functions.nim` - REPL with custom functions (longer)
-- `examples/qjs/repl_bytecode.nim` - REPL from embedded bytecode (no external files)
-- `examples/qjs/advanced_native_bridging.nim` - Complex type marshaling
-- `examples/qjs/comprehensive_features.nim` - Feature showcase
-- `examples/qjs/idiomatic_patterns.nim` - Idiomatic usage patterns
-- `examples/qjs/type_system.nim` - Type system examples
-- `examples/qjs/module_example.nim` - ES6 module usage
+### QuickJS Examples (in `examples/qjs/`)
+- `basic_example.nim` - Simple JavaScript evaluation
+- `call_nim_from_js.nim` - Exposing Nim functions to JavaScript
+- `bytecode_basic.nim` - Basic bytecode compilation and execution
+- `bytecode_comprehensive.nim` - Complete bytecode feature showcase
+- `repl_qjs.nim` - Standalone REPL implementation
+- `repl_with_nim_function.nim` - REPL with one custom function (simple)
+- `repl_with_nim_functions.nim` - REPL with custom functions (longer)
+- `repl_bytecode.nim` - REPL from embedded bytecode (no external files)
+- `advanced_native_bridging.nim` - Complex type marshaling
+- `comprehensive_features.nim` - Feature showcase
+- `idiomatic_patterns.nim` - Idiomatic usage patterns
+- `type_system.nim` - Type system examples
+- `module_example.nim` - ES6 module usage
 
-### MicroPython Examples
-- `examples/mpy/basic_example.nim` - Simple Python evaluation
-- `examples/mpy/api_demo.nim` - API consistency demonstration
-- `examples/mpy/with_nim_funcs.nim` - Nim function integration patterns (future)
-- `examples/mpy/native_integration.nim` - Native C API integration patterns
-- `examples/mpy/nim_integration.nim` - Clean Nim-Python integration
-- `examples/mpy/simple_integration.nim` - Simple integration patterns
-- `examples/mpy/everything_features.nim` - Comprehensive feature showcase
-- `examples/mpy/repl_mpy.nim` - MicroPython REPL implementation
+### MicroPython Examples (in `examples/mpy/`)
+- `basic_example.nim` - Simple Python evaluation
+- `repl_mpy.nim` - Interactive REPL with readline support
+- `repl_tiny.nim` - Minimal REPL implementation
+- `examples/mpy/repl_tiny.nim` - Minimal REPL implementation
 
-### Multi-Engine Examples
-- `examples/multi/dual_engines.nim` - Using both JS and Python together
+### Multi-Engine Examples (in `examples/multi/`)
+- `dual_engines.nim` - Using both JS and Python together
 
-### Testing
-- `tests/qjs/test_basic.nim` - Basic QuickJS functionality tests
-- `tests/qjs/test_repl.nim` - QuickJS REPL testing wrapper
-- `tests/qjs/test_repl.exp` - Expect script for interactive REPL testing
-- `tests/qjs/test_repl_bytecode.exp` - Expect script for bytecode REPL testing
-- `tests/mpy/test_repl.nim` - MicroPython REPL testing wrapper
-- `tests/mpy/test_repl.exp` - Expect script for MicroPython testing
+### Testing (organized by engine)
+- `tests/qjs/` - QuickJS test suite
+  - `test_basic.nim` - Basic QuickJS functionality tests
+  - `test_repl.nim` - QuickJS REPL testing wrapper
+  - `test_repl.exp` - Expect script for interactive REPL testing
+  - `test_repl_bytecode.exp` - Expect script for bytecode REPL testing
+- `tests/mpy/` - MicroPython test suite
+  - `test_repl.nim` - MicroPython REPL testing wrapper
+  - `test_repl.exp` - Expect script for MicroPython testing
+
+### Tools
+- `tools/c_bytecode_to_nim.nim` - Converts C bytecode arrays to Nim constants
 
 ## Key Features
 
@@ -351,7 +359,9 @@ While MICROPY_CONFIG_ROM_LEVEL_EVERYTHING provides extensive compatibility, some
 
 ### REPL Implementation
 - **QuickJS**: Uses official QuickJS `repl.js` for full feature support
-- **MicroPython**: Basic REPL implementation in `examples/mpy/repl_mpy.nim`
+- **MicroPython**: Multiple REPL implementations:
+  - `examples/mpy/repl_mpy.nim` - Full-featured REPL with readline support
+  - `examples/mpy/repl_tiny.nim` - Minimal REPL implementation
 - Syntax highlighting and command history (QuickJS)
 - Custom Nim function exposure via `registerFunction` (QuickJS)
 - Event loop processing via `processStdLoop()` and `runPendingJobs()` (QuickJS)

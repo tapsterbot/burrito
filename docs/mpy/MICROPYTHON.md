@@ -250,13 +250,7 @@ nim c -r \
 
 ### MicroPython Examples
 - `examples/mpy/basic_example.nim` - Basic MicroPython usage
-- `examples/mpy/api_demo.nim` - API demonstration  
-- `examples/mpy/with_nim_funcs.nim` - Nim function integration patterns (future)
-- `examples/mpy/native_integration.nim` - Native C API integration patterns
-- `examples/mpy/nim_integration.nim` - Clean Nim-Python integration
-- `examples/mpy/simple_integration.nim` - Simple integration examples
-- `examples/mpy/everything_features.nim` - Comprehensive feature showcase
-- `examples/mpy/repl_mpy.nim` - Interactive MicroPython REPL
+- `examples/mpy/repl_mpy.nim` - Interactive REPL with readline support (command history, line editing, tab completion)
 
 ### Multi-Engine Examples
 - `examples/multi/dual_engines.nim` - JavaScript + Python in same application
@@ -340,6 +334,25 @@ dualCalculator()
 3. **Avoid imports**: Stick to built-in functions when possible
 4. **Memory management**: Always call close() or use defer
 
+## Current Limitations
+
+The current MicroPython integration provides:
+- ✅ Python code evaluation
+- ✅ Output capture from print statements  
+- ✅ Variable persistence across eval() calls
+- ✅ Multi-line code execution
+- ✅ Interactive REPL with readline support
+- ✅ Command history and line editing  
+- ✅ Tab completion for Python keywords
+- ✅ Proper Ctrl+C/Ctrl+D handling (Ctrl+D exits, Ctrl+C interrupts)
+- ⚠️  Known limitation: Tab completion cursor positioning (use Ctrl+E to jump to end)
+
+**Not yet implemented:**
+- ❌ Function registration (calling Nim functions from Python)
+- ❌ Rich type conversions between Nim and Python
+- ❌ Native bridging capabilities
+- ❌ Custom module loading
+
 ## Future Enhancements
 
 ### Planned Features
@@ -351,7 +364,7 @@ dualCalculator()
 
 ### Research Areas
 - [ ] **Bytecode Compilation**: Pre-compile Python to bytecode
-- [ ] **REPL Integration**: Interactive Python shell
+- ✅ **REPL Integration**: Interactive Python shell with readline support
 - [ ] **Threading Support**: Multi-threaded Python execution
 - [ ] **Performance Optimization**: JIT compilation and caching
 
